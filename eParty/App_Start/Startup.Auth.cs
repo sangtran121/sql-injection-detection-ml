@@ -38,8 +38,8 @@ namespace eParty
             // TODO: Thêm Google OAuth sau khi deploy
             app.UseGoogleAuthentication(new GoogleOAuth2AuthenticationOptions
             {
-                ClientId = "YOUR_GOOGLE_CLIENT_ID",
-                ClientSecret = "YOUR_GOOGLE_CLIENT_SECRET"
+                ClientId = "5256981425-brbfsc635e1d5e9s7757pvrrukvaoqi0.apps.googleusercontent.com",
+                ClientSecret = "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"
             });
         }
     }
