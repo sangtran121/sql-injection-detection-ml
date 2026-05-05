@@ -1,0 +1,64 @@
+﻿@model eParty.Models.MenuViewModel
+
+@{
+    ViewBag.Title = "Thực đơn";
+    Layout = "~/Views/Shared/LayoutUser.cshtml"; // Đảm bảo đường dẫn Layout đúng
+}
+
+<div class="container-fluid menu bg-light py-6 my-6">
+    <div class="container">
+        <div class="text-center wow bounceInUp" data-wow-delay="0.1s">
+            <small class="d-inline-block fw-bold text-dark text-uppercase bg-light border border-primary rounded-pill px-4 py-1 mb-3">Thực đơn của chúng tôi</small>
+            <h1 class="display-5 mb-5">Thưởng thức những món ăn tuyệt vời</h1>
+        </div>
+        <div class="tab-class text-center">
+
+            <ul class="nav nav-pills d-inline-flex justify-content-center mb-5 wow bounceInUp" data-wow-delay="0.1s">
+                @{ var isFirstCategory = true; }
+                @foreach (var category in Model.CategoriesWithFoods)
+                {
+                    <li class="nav-item p-2">
+                        <a class="d-flex py-2 mx-2 border border-primary bg-white rounded-pill @(isFirstCategory ? "active" : "")" data-bs-toggle="pill" href="#tab-@category.Id">
+                            <span class="text-dark" style="width: 150px;">@category.Name</span>
+                        </a>
+                    </li>
+                    isFirstCategory = false;
+                }
+            </ul>
+
+            <div class="tab-content">
+                @{ isFirstCategory = true; }
+                @foreach (var category in Model.CategoriesWithFoods)
+                {
+                    <div id="tab-@category.Id" class="tab-pane fade p-0 @(isFirstCategory ? "active show" : "")">
+                        <div class="row g-4">
+                            @if (category.Foods != null && category.Foods.Any())
+                            {
+                                foreach (var food in category.Foods)
+                                {
+                                    <div class="col-lg-6 wow bounceInUp" data-wow-delay="0.1s">
+                                        <div class="menu-item d-flex align-items-center">
+                                            <img class="flex-shrink-0 img-fluid rounded-circle" src="data:image/jpeg;base64,@food.Image" alt="@food.Name" style="width: 100px; height: 100px; object-fit: cover;">
+                                            <div class="w-100 d-flex flex-column text-start ps-4">
+                                                <div class="d-flex justify-content-between border-bottom border-primary pb-2 mb-2">
+                                                    <h4>@food.Name</h4>
+                                                    <h4 class="text-primary">@food.Cost.ToString("N0") VNĐ</h4>
+                                                </div>
+                                                <p class="mb-0">@food.Description</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            }
+                            else
+                            {
+                                <p>Chưa có món ăn nào trong danh mục này.</p>
+                            }
+                        </div>
+                    </div>
+                    isFirstCategory = false;
+                }
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,108 @@
+﻿@{
+    ViewBag.Title = "Staff Dashboard"; // Đổi Title lại tiếng Anh nếu muốn
+    Layout = "~/Areas/Staff/Views/Shared/_LayoutStaff.cshtml";
+}
+
+<div class="container">
+    <div class="page-inner">
+        <div class="d-flex align-items-left align-items-md-center flex-column flex-md-row pt-2 pb-4">
+            <div>
+                <h3 class="fw-bold mb-3">Staff Dashboard</h3> @* Giữ tiếng Anh *@
+            </div>
+        </div>
+
+         @if (ViewBag.ErrorMessage != null)
+         {
+            <div class="alert alert-danger">@ViewBag.ErrorMessage</div>
+         }
+
+        <div class="row d-flex justify-content-center"> @* Thêm justify-content-center để căn giữa nếu cột không chiếm hết 12 phần *@
+            @* --- Điều chỉnh cột để thẻ lớn hơn --- *@
+            <div class="col-lg-8 col-md-10 col-sm-12"> @* Sử dụng col-lg-8, col-md-10 để thẻ rộng hơn trên màn hình lớn và vừa *@
+                <div class="card card-primary card-round">
+                    <div class="card-header">
+                        <div class="card-head-row">
+                            @* --- Đổi lại tiêu đề tiếng Anh --- *@
+                     
+       <div class="card-title">Daily Sales (Personal)</div>
+                        </div>
+                        @* --- Đổi lại category tiếng Anh và hiển thị ngày --- *@
+                        <div class="card-category">Calculated from @ViewBag.CalculationStartDate to @ViewBag.TodayDate</div>
+   <div class="card-body pb-0">
+                        <div class="mb-4 mt-2">
+                             @* Hiển thị giá trị Daily Sales từ ViewBag (vẫn có VND) *@
+               
+       <h1>@ViewBag.DailySalesStaff</h1>
+                        </div>
+                         @* Giữ lại canvas nếu muốn vẽ biểu đồ *@
+                        <div class="pull-in">
+                            <canvas id="dailySalesChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            @* --- Kết thúc cột Daily Sales --- *@
+        </div>
+    </div>
+</div>
+
+@section scripts {
+    <script src="/Content/admin/dashboard/js/plugin/chart.js/chart.min.js"></script>
+    <script src="/Content/admin/dashboard/js/plugin/jquery.sparkline/jquery.sparkline.min.js"></script>
+
+    <script>
+        // Giữ nguyên script vẽ biểu đồ mẫu hoặc logic bạn muốn
+        var dailySalesChart = document.getElementById("dailySalesChart")?.getContext("2d"); // Thêm ?. để tránh lỗi nếu canvas bị xóa
+
+        if (dailySalesChart) { // Chỉ vẽ nếu có canvas
+             var myDailySalesChart = new Chart(dailySalesChart, {
+                 type: "line",
+                 data: {
+                    labels: [ "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"], // Placeholder labels
+                    datasets: [
+                        {
+                            label: "Sales",
+                            fill: !0,
+                            backgroundColor: "rgba(255, 255, 255, 0.2)",
+                            borderColor: "#fff",
+                            borderCapStyle: "butt",
+                            borderDash: [],
+                            borderDashOffset: 0,
+                            borderJoinStyle: "miter",
+                            pointBorderColor: "#fff",
+                            pointBackgroundColor: "#fff",
+                            pointBorderWidth: 1,
+                            pointHoverRadius: 5,
+                            pointHoverBackgroundColor: "#fff",
+                            pointHoverBorderColor: "#fff",
+                            pointHoverBorderWidth: 1,
+                            pointRadius: 1,
+                            pointHitRadius: 5,
+                             data: [1500, 2300, 1800, 2800, 1900, 3100, 2500], // Placeholder data (USD or just numbers)
+                        },
+                    ],
+                },
+                 options: { // Copy options từ layout Admin hoặc tùy chỉnh
+                     maintainAspectRatio: !1,
+                     legend: { display: !1 },
+                     animation: { easing: "easeInOutBack" },
+                     scales: {
+                         yAxes: [{ display: !1 }], // Ẩn trục Y
+                         xAxes: [{ display: !1 }], // Ẩn trục X
+                    },
+                     tooltips: { // Tùy chỉnh tooltip nếu cần
+                         callbacks: {
+                             label: function(tooltipItem, chart) {
+                                 var datasetLabel = chart.datasets[tooltipItem.datasetIndex].label || '';
+                                 // Định dạng lại giá trị nếu muốn (ví dụ: thêm $)
+                                 // return datasetLabel + ': $' + tooltipItem.yLabel;
+                                 return datasetLabel + ': ' + tooltipItem.yLabel;
+                             }
+                         }
+                     }
+                 },
+             });
+        }
+
+    </script>
+}
