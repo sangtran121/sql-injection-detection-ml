@@ -1,7 +1,6 @@
 ﻿using eParty.Helpers;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Web.Mvc;
@@ -17,69 +16,84 @@ namespace eParty.Controllers
         }
 
         [HttpPost]
-        public JsonResult TestBatch(string payloads)
+        public JsonResult TestBatch(string payloads, string mode = "ml")
         {
             if (string.IsNullOrWhiteSpace(payloads))
                 return Json(new { success = false, message = "Không có payload" });
 
             var lines = payloads.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
             var results = new List<object>();
+            var filter = new SqlInjectionFilter();
 
-            using (var client = new HttpClient { Timeout = TimeSpan.FromSeconds(3) })
+            foreach (var line in lines)
             {
-                foreach (var line in lines)
+                string payload = line.Trim();
+                if (string.IsNullOrWhiteSpace(payload)) continue;
+
+                bool isBlocked = false;
+                string reason = "An toàn";
+                double prob = 0;
+
+                if (mode == "full")
                 {
-                    string payload = line.Trim();
-                    if (string.IsNullOrWhiteSpace(payload)) continue;
-
-                    bool isBlocked = false;
-                    string reason = "An toàn";
-                    double prob = 0;
-
-                    try
+                    string lower = payload.ToLower().Trim();
+                    if (filter.IsPureVietnameseText(lower))
                     {
-                        var jsonContent = new StringContent(
-                            Newtonsoft.Json.JsonConvert.SerializeObject(new { query = payload }),
-                            Encoding.UTF8,
-                            "application/json");
-
-                        var response = client.PostAsync("http://localhost:5000/predict", jsonContent).Result;
-
-                        if (response.IsSuccessStatusCode)
-                        {
-                            var resultJson = response.Content.ReadAsStringAsync().Result;
-                            dynamic data = Newtonsoft.Json.JsonConvert.DeserializeObject(resultJson);
-
-                            prob = Convert.ToDouble(data.probability ?? 0);
-                            isBlocked = prob > 0.55;
-                            reason = $"ML Model (Prob: {prob:F4})";
-                        }
-                        else
-                        {
-                            reason = $"Flask trả về lỗi {response.StatusCode}";
-                        }
+                        reason = "Full Filter - Text tiếng Việt an toàn";
                     }
-                    catch (Exception ex)
+                    else if (filter.IsClearlyDangerous(lower))
                     {
-                        reason = $"Flask lỗi: {ex.Message}";
-                        // Fallback Rule
-                        string lower = payload.ToLower();
-                        isBlocked = lower.Contains("union") || lower.Contains("or 1=1") ||
-                                   lower.Contains("drop table") || lower.Contains("pg_sleep") ||
-                                   lower.Contains("waitfor");
+                        isBlocked = true;
+                        reason = "Full Filter - Rule-based chặn";
                     }
-
-                    results.Add(new
+                    else
                     {
-                        Payload = payload.Length > 90 ? payload.Substring(0, 87) + "..." : payload,
-                        Status = isBlocked ? "🚫 BỊ CHẶN" : "✅ Cho qua",
-                        Reason = reason,
-                        Probability = prob
-                    });
+                        prob = GetMLProbability(payload);
+                        isBlocked = prob > 0.55;
+                        reason = $"Full Filter - ML Prob: {prob:F4}";
+                    }
                 }
+                else // mode = "ml"
+                {
+                    prob = GetMLProbability(payload);
+                    isBlocked = prob > 0.55;
+                    reason = $"Only ML (Prob: {prob:F4})";
+                }
+
+                results.Add(new
+                {
+                    Payload = payload.Length > 90 ? payload.Substring(0, 87) + "..." : payload,
+                    Status = isBlocked ? "🚫 BỊ CHẶN" : "✅ Cho qua",
+                    Reason = reason,
+                    Probability = prob,
+                    TestMode = mode == "full" ? "Full Filter" : "Only ML"
+                });
             }
 
             return Json(new { success = true, results, total = results.Count });
+        }
+
+        private double GetMLProbability(string query)
+        {
+            try
+            {
+                using (var client = new HttpClient { Timeout = TimeSpan.FromSeconds(3) })
+                {
+                    var content = new StringContent(
+                        Newtonsoft.Json.JsonConvert.SerializeObject(new { query }),
+                        Encoding.UTF8, "application/json");
+
+                    var response = client.PostAsync("http://localhost:5000/predict", content).Result;
+                    if (response.IsSuccessStatusCode)
+                    {
+                        var json = response.Content.ReadAsStringAsync().Result;
+                        dynamic data = Newtonsoft.Json.JsonConvert.DeserializeObject(json);
+                        return Convert.ToDouble(data.probability ?? 0);
+                    }
+                }
+            }
+            catch { }
+            return 0;
         }
     }
 }

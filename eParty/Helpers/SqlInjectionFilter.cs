@@ -54,7 +54,6 @@ namespace eParty.Helpers
 
             string lower = input.ToLower().Trim();
 
-            // 1. Rule-based mạnh hơn (ưu tiên cao)
             if (IsClearlyDangerous(lower))
             {
                 LogToDatabase(filterContext, input, "Rule-based");
@@ -62,54 +61,51 @@ namespace eParty.Helpers
                 return;
             }
 
-            // 2. Text thuần Việt thuần túy (không lẫn payload) → Cho qua
             if (IsPureVietnameseText(lower))
             {
                 base.OnActionExecuting(filterContext);
                 return;
             }
 
-            // 3. Gọi ML Model (nếu Flask đang chạy)
             Task.Run(async () => await CheckWithMLAsync(input, filterContext));
 
             base.OnActionExecuting(filterContext);
         }
 
-        private string GetAllInput(HttpRequestBase request)
-        {
-            string all = "";
-            if (request.Form != null)
-                foreach (var key in request.Form.AllKeys ?? Array.Empty<string>())
-                    all += " " + request.Form[key];
-
-            if (request.QueryString != null)
-                foreach (var key in request.QueryString.AllKeys ?? Array.Empty<string>())
-                    all += " " + request.QueryString[key];
-
-            all += " " + (request.RawUrl ?? "");
-            return all.Trim();
-        }
-
-        private bool IsPureVietnameseText(string lower)
+        // === Hai hàm này được public để Test Controller gọi được ===
+        public bool IsPureVietnameseText(string lower)
         {
             return VietnameseWhitelist.Any(w => lower.Contains(w)) &&
                    !DangerousPatterns.Any(p => lower.Contains(p));
         }
 
-        private bool IsClearlyDangerous(string lower)
+        public bool IsClearlyDangerous(string lower)
         {
-            // Pattern mở rộng
             var strongPatterns = new[]
             {
-        "or 1=1", "'1'='1", "union select", "drop table", "pg_sleep",
-        "waitfor delay", "xp_cmdshell", "information_schema", "/\\*\\*/",
-        "/\\*!", "cast\\(.+as int", "0x", "benchmark\\(", "sleep\\(",
-        "admin' or", "1' or '1", ";\\s*drop", ";\\s*delete", "union\\s+/\\*\\*/select"
+                "or 1=1", "'1'='1", "union select", "drop table", "pg_sleep",
+                "waitfor delay", "xp_cmdshell", "information_schema", "/\\*\\*/",
+                "/\\*!", "cast\\(.+as int", "0x", "benchmark\\(", "sleep\\(",
+                "admin' or", "1' or '1", ";\\s*drop", ";\\s*delete", "union\\s+/\\*\\*/select"
             };
 
             return strongPatterns.Any(p =>
                 Regex.IsMatch(lower, p, RegexOptions.IgnoreCase) ||
                 lower.Contains(p.Replace("\\", "")));
+        }
+
+        // Các hàm còn lại giữ nguyên (GetAllInput, CheckWithMLAsync, LogToDatabase, HandleSuspiciousRequest)
+        private string GetAllInput(HttpRequestBase request)
+        { /* giữ nguyên code cũ */
+            string all = "";
+            if (request.Form != null)
+                foreach (var key in request.Form.AllKeys ?? Array.Empty<string>())
+                    all += " " + request.Form[key];
+            if (request.QueryString != null)
+                foreach (var key in request.QueryString.AllKeys ?? Array.Empty<string>())
+                    all += " " + request.QueryString[key];
+            all += " " + (request.RawUrl ?? "");
+            return all.Trim();
         }
 
         private async Task CheckWithMLAsync(string query, ActionExecutingContext context)
@@ -118,26 +114,19 @@ namespace eParty.Helpers
             {
                 var payload = new { query = query };
                 var content = new StringContent(JsonConvert.SerializeObject(payload), Encoding.UTF8, "application/json");
-
                 var response = await client.PostAsync(FlaskUrl, content);
                 if (!response.IsSuccessStatusCode) return;
 
                 var resultJson = await response.Content.ReadAsStringAsync();
                 dynamic result = JsonConvert.DeserializeObject(resultJson);
-
                 double probability = Convert.ToDouble(result.probability ?? 0);
 
                 if (probability > MLThreshold)
                 {
                     LogToDatabase(context, query, $"ML Model ({probability:F4})");
-                    // Không chặn request đã chạy, chỉ log để sau này review
                 }
             }
-            catch (Exception ex)
-            {
-                // Flask lỗi hoặc chưa chạy → ghi log để debug
-                System.Diagnostics.Debug.WriteLine($"Flask ML Error: {ex.Message}");
-            }
+            catch { }
         }
 
         private void LogToDatabase(ActionExecutingContext filterContext, string payload, string detectedBy)
@@ -157,7 +146,6 @@ namespace eParty.Helpers
                         UserAgent = filterContext.HttpContext.Request.UserAgent,
                         IsBlocked = true
                     };
-
                     db.SQLInjectionLogs.Add(log);
                     db.SaveChanges();
                 }
@@ -172,7 +160,6 @@ namespace eParty.Helpers
                 Data = new { success = false, message = "Yêu cầu bị chặn vì nghi ngờ SQL Injection!", code = "SQL_INJECTION_DETECTED" },
                 JsonRequestBehavior = JsonRequestBehavior.AllowGet
             };
-
             filterContext.HttpContext.Response.StatusCode = 403;
         }
     }
