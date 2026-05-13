@@ -1,157 +1,248 @@
-# 🛡️ SQL Injection Detection with Machine Learning
+<div align="center">
 
-**Hệ thống phát hiện và chặn tấn công SQL Injection bằng Machine Learning**  
-Tích hợp vào dự án **Party Serv System** (ASP.NET MVC 5)
+# 🛡️ SQL Injection Detection — Machine Learning
 
-<p align="center">
-  <img src="https://img.shields.io/badge/ASP.NET_MVC-5-blue?style=for-the-badge&logo=dotnet" />
-  <img src="https://img.shields.io/badge/Python-Flask-green?style=for-the-badge&logo=python" />
-  <img src="https://img.shields.io/badge/Model-XGBoost-orange?style=for-the-badge" />
-  <img src="https://img.shields.io/badge/Accuracy-99.7%25-brightgreen?style=for-the-badge" />
-  <img src="https://img.shields.io/badge/SQL_Server-red?style=for-the-badge&logo=microsoftsqlserver" />
-</p>
+**Hệ thống phát hiện và chặn tấn công SQL Injection bằng XGBoost + Rule-based Filter**  
+Tích hợp vào website quản lý dịch vụ tiệc cưới **eParty** (ASP.NET MVC)
+
+[![Python](https://img.shields.io/badge/Python-3.10%2F3.11-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
+[![Flask](https://img.shields.io/badge/Flask-API-000000?style=for-the-badge&logo=flask&logoColor=white)](https://flask.palletsprojects.com)
+[![XGBoost](https://img.shields.io/badge/XGBoost-ML%20Model-FF6600?style=for-the-badge)](https://xgboost.readthedocs.io)
+[![ASP.NET](https://img.shields.io/badge/ASP.NET-MVC%204.8-512BD4?style=for-the-badge&logo=dotnet&logoColor=white)](https://dotnet.microsoft.com)
+
+</div>
 
 ---
 
 ## 📖 Giới thiệu
 
-Đây là module bảo mật được phát triển cho **Party Serv System** — hệ thống quản lý tiệc cưới / sự kiện.
+Đây là phiên bản nâng cấp của dự án **Party Serv System (eParty)** — một website quản lý dịch vụ tiệc cưới được thực hiện trong môn học lập trình web tại trường đại học.
 
-Thay vì chỉ dùng regex truyền thống (dễ bị bypass), hệ thống sử dụng **mô hình Machine Learning (XGBoost + TF-IDF)** để phân tích ngữ nghĩa của input, giúp phát hiện cả các tấn công obfuscated và zero-day.
+Ban đầu, dự án chỉ là một website thông thường sử dụng **C# ASP.NET MVC + Entity Framework** với các chức năng chính: đăng ký, đặt tiệc, quản lý menu, booking, thanh toán... Sau khi hoàn thành, nhóm nhận ra một lỗ hổng bảo mật rất nghiêm trọng là **SQL Injection**.
 
-**Độ chính xác mô hình**: **99.7%** trên tập test.
-
----
-
-## ✨ Tính năng nổi bật
-
-- Phát hiện thời gian thực bằng XGBoost
-- Action Filter chặn request ngay trước khi vào Controller
-- Logging chi tiết vào database (`SQLInjectionLogs`)
-- Hỗ trợ tốt nội dung tiếng Việt (giảm false positive)
-- Flask REST API độc lập, dễ scale
-- Có cơ chế fallback rule-based khi API không hoạt động
+Vì vậy, nhóm quyết định **tích hợp thêm lớp bảo mật thông minh bằng Machine Learning** để hệ thống có khả năng tự động phát hiện và chặn các cuộc tấn công SQL Injection một cách chính xác.
 
 ---
 
-## 🏗️ Kiến trúc hệ thống
+## 🎯 Mục tiêu dự án
 
-```
-Người dùng → ASP.NET MVC (SqlInjectionFilter)
-                    ↓
-          Gửi input đến Flask API
-                    ↓
-          XGBoost Model → Dự đoán
-                    ↓
-     Blocked (403) hoặc Allowed + Log DB
-```
+- Xây dựng website quản lý tiệc cưới hoàn chỉnh
+- Tích hợp **Machine Learning (XGBoost)** để phát hiện SQL Injection
+- Kết hợp **Rule-based Filter** để tăng tốc độ và độ chính xác
+- Hỗ trợ tốt **tiếng Việt** — không chặn nhầm mô tả tiệc, menu, teambuilding...
+- Ghi log chi tiết các cuộc tấn công vào database
+- Có công cụ **test batch** để kiểm tra hiệu suất hàng loạt
 
 ---
 
-## 📁 Cấu trúc thư mục
+## ✅ Kết quả đạt được
+
+| Tiêu chí | Kết quả |
+|---|---|
+| Phát hiện SQL Injection | Classic, Union-based, Time-based, Error-based, Obfuscated |
+| Hỗ trợ tiếng Việt | ✅ Không chặn nhầm mô tả tiệc cưới, menu, chi phí, khách mời |
+| Test batch | Kiểm tra hàng trăm payload cùng lúc |
+| Phạm vi bảo vệ | Form Booking, Menu, Description và toàn bộ input |
+| Ghi log | ✅ Đầy đủ vào database để theo dõi |
+
+---
+
+## ⚙️ Yêu cầu hệ thống
+
+| Thành phần | Yêu cầu |
+|---|---|
+| Hệ điều hành | Windows 10 / Windows 11 |
+| IDE | Visual Studio 2022 (Community Edition) |
+| Framework | .NET Framework 4.8 |
+| Python | **3.10 hoặc 3.11** *(không dùng 3.12)* |
+| RAM | Tối thiểu 8GB *(khuyến nghị 16GB)* |
+| Khác | Kết nối Internet (để cài package lần đầu) |
+
+---
+
+## 📂 Cấu trúc thư mục
 
 ```
 sql-injection-detection-ml/
-├── eParty/                             ← Dự án ASP.NET MVC chính
-│   ├── Helpers/SqlInjectionFilter.cs   ← Filter bảo mật (Action Filter)
-│   ├── Models/SQLInjectionLog.cs       ← Bảng log tấn công
-│   └── Web.config
 │
-├── sql_injection_ml/                   ← Phần Machine Learning
-│   ├── app.py                          ← Flask REST API
-│   ├── sql_injection_detection.py      ← Script train model
-│   └── models/                         ← xgboost_model.pkl + tfidf_vectorizer.pkl
+├── 📁 eParty/                           ← Website ASP.NET MVC chính
+│   ├── Controllers/
+│   ├── Helpers/
+│   │   └── SqlInjectionFilter.cs        ← Logic lọc SQL Injection
+│   ├── wwwroot/
+│   │   └── models/                      ← Đặt 2 file .pkl vào đây ⚠️
+│   └── eParty.sln
 │
-├── ssms/                               ← Script SQL tạo bảng
+├── 📁 sql_injection_ml/                 ← Phần Machine Learning (Python)
+│   ├── app.py                           ← Flask REST API
+│   ├── sql_injection_detection.py       ← Script train model
+│   └── models/                          ← Output: 2 file .pkl
+│
 └── README.md
 ```
 
 ---
 
-## 🚀 Hướng dẫn cài đặt (Dành cho người mới bắt đầu)
+## 🚀 Hướng dẫn cài đặt từng bước
 
-### Yêu cầu
+### Bước 1 — Tải source code
 
-- Visual Studio 2019 hoặc 2022
-- .NET Framework 4.7.2+
-- Python 3.8+
-- SQL Server
+1. Nhấn nút **`Code`** (màu xanh) → **`Download ZIP`**
+2. Giải nén ra thư mục dễ nhớ, ví dụ:
+   ```
+   C:\Users\TênBạn\Desktop\sql-injection-detection-ml
+   ```
 
-### Bước 1: Clone repository
+---
 
-```bash
-git clone https://github.com/sangtran121/sql-injection-detection-ml.git
-cd sql-injection-detection-ml
+### Bước 2 — Cài đặt Python & Flask
+
+Mở **Command Prompt** và chạy lần lượt:
+
+```cmd
+# Di chuyển vào thư mục Python
+cd C:\Users\TênBạn\Desktop\sql-injection-detection-ml\sql_injection_ml
+
+# Tạo môi trường ảo
+python -m venv venv
+
+# Kích hoạt môi trường ảo
+venv\Scripts\activate
+
+# Cài các thư viện cần thiết
+pip install flask pandas scikit-learn xgboost joblib numpy
 ```
 
-### Bước 2: Chạy Flask API (Python)
+---
 
-Mở Terminal và chạy:
+### Bước 3 — Train Model & tạo file `.pkl`
 
-```bash
-cd sql_injection_ml
-pip install flask
+Vẫn trong thư mục `sql_injection_ml`, chạy:
+
+```cmd
+python sql_injection_detection.py
+```
+
+Chờ đến khi thấy thông báo:
+```
+✅ ĐÃ LƯU MODEL: sql_injection_xgboost_model.pkl
+```
+
+Lệnh trên tạo ra **2 file** trong thư mục `sql_injection_ml\models\`:
+- `sql_injection_xgboost_model.pkl`
+- `tfidf_vectorizer.pkl`
+
+> **⚠️ Bước bắt buộc:** Copy cả 2 file `.pkl` vào:
+> ```
+> eParty\wwwroot\models\
+> ```
+> *(Thư mục này đã có sẵn trong project)*
+
+---
+
+### Bước 4 — Mở & build project Web
+
+1. Mở **Visual Studio 2022**
+2. Chọn **Open a project or solution** → mở file `eParty.sln`
+3. Chờ Visual Studio load xong
+4. Click chuột phải vào Solution → **Restore NuGet Packages**
+5. Build: **`Ctrl + Shift + B`**
+
+---
+
+## ▶️ Chạy hệ thống
+
+> **⚠️ Quan trọng:** Phải khởi động theo đúng thứ tự sau.
+
+### 1️⃣ Khởi động Flask ML API
+
+```cmd
+cd C:\Users\TênBạn\Desktop\sql-injection-detection-ml\sql_injection_ml
+venv\Scripts\activate
 python app.py
 ```
 
-> ⚠️ **Quan trọng:** Giữ terminal này luôn mở.
+> Giữ cửa sổ này **luôn mở** trong suốt quá trình sử dụng.
 
-### Bước 3: Chạy Web ASP.NET
+### 2️⃣ Khởi động Website ASP.NET
 
-1. Mở file `eParty.sln` bằng Visual Studio
-2. Build Solution (`Ctrl + Shift + B`)
-3. Nhấn `F5` để chạy
+Trong Visual Studio:
+- Click chuột phải project `eParty` → **Set as Startup Project**
+- Nhấn **`F5`** để chạy
 
-### Bước 4: Test hệ thống
-
-**Test tấn công** (Nên bị chặn):
-
-```
-' OR '1'='1 --
-1; DROP TABLE Events --
-admin' OR 1=1 #
-1 UNION/**/SELECT 1,2,3 --
-pg_sleep(5)--
-```
-
-**Test bình thường** (Nên cho qua):
-
-```
-Tạo bàn in đẹp cho tiệc cưới
-Menu: Gỏi cuốn - Cá kho tộ
-Tiệc công ty ABC - Teambuilding 2026
-```
+Website sẽ mở tại: **`https://localhost:44350`**
 
 ---
 
-## 📊 Hiệu năng Model
+## 🧪 Cách test hệ thống
 
-| Chỉ số | Kết quả |
+1. Truy cập: `https://localhost:44350/SqlInjectionTest/Index`
+2. Dán payload vào ô textarea
+3. Chọn chế độ kiểm tra:
+
+| Chế độ | Mô tả |
 |---|---|
-| Accuracy | **99.7%** |
-| Stress Test (40+ cases) | **86% – 93%** |
-| Loại tấn công phát hiện tốt | Tautology, Union, Time-based, Login Bypass, Obfuscated, Schema Leak |
+| **Only ML** | Kiểm tra thuần bằng Machine Learning |
+| **Full Filter** | Giả lập filter thực tế trên website (ML + Rule-based) |
+
+4. Nhấn **"CHẠY TEST HÀNG LOẠT"**
 
 ---
 
-## ⚠️ Lưu ý quan trọng
+## 🛠️ Khắc phục lỗi thường gặp
 
-- Phải chạy `app.py` trước khi chạy web ASP.NET
-- Nếu Flask API không chạy, hệ thống sẽ tự động fallback về rule-based (vẫn có bảo vệ cơ bản)
-- Log tấn công được lưu trong bảng `SQLInjectionLogs`
+<details>
+<summary><b>❌ Lỗi: <code>No module named flask</code></b></summary>
+
+Chạy lại lệnh cài thư viện:
+```cmd
+pip install flask
+```
+</details>
+
+<details>
+<summary><b>❌ Lỗi: Website load mãi không ra</b></summary>
+
+Đảm bảo `app.py` (Flask) đang chạy **trước khi** mở website. Kiểm tra cửa sổ CMD xem Flask đã khởi động chưa.
+</details>
+
+<details>
+<summary><b>❌ Lỗi: Không tìm thấy file <code>.pkl</code></b></summary>
+
+Kiểm tra lại xem đã copy đúng 2 file `.pkl` vào thư mục `eParty\wwwroot\models\` chưa.
+</details>
 
 ---
 
-## 📬 Hỗ trợ
+## 🔍 Hệ thống hoạt động như thế nào?
 
-Nếu gặp lỗi:
-
-- Kiểm tra Flask API có đang chạy trên port `5000` không
-- Tạo Issue trên GitHub
+```
+Request từ người dùng
+        │
+        ▼
+┌────────────────────┐
+│  Rule-based Filter │  ← Chặn ngay các pattern rõ ràng (nhanh)
+└─────────┬──────────┘
+          │ Không chắc chắn
+          ▼
+┌────────────────────┐
+│   Flask ML API     │  ← Gửi payload đến XGBoost model
+└─────────┬──────────┘
+          │
+     ┌────┴────┐
+     ▼         ▼
+  CHẶN ⛔   CHO QUA ✅
+     │
+     ▼
+Ghi log vào Database
+```
 
 ---
 
-<p align="center">
-  ✅ Hoàn thành: 06/05/2026 &nbsp;|&nbsp; 👤 Người thực hiện: <strong>Sang</strong><br/>
-  Made with ❤️ for Secure Party Management
-</p>
+<div align="center">
+
+Nếu gặp lỗi ở bước nào, hãy mở một **[Issue](https://github.com/sangtran121/sql-injection-detection-ml/issues)** kèm ảnh chụp màn hình — mình sẽ hỗ trợ ngay!
+
+**Chúc bạn thành công! 🎉**
+
+</div>
