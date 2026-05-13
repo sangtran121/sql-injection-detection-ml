@@ -1,4 +1,4 @@
-# ================== ASP.NET MVC ==================
+# ================== Build & Visual Studio ==================
 bin/
 obj/
 packages/
@@ -6,36 +6,33 @@ packages/
 *.user
 *.suo
 *.pdb
+
+# ================== Machine Learning Models (quan trọng) ==================
+*.pkl
+*.pickle
+**/models/*.pkl
+**/wwwroot/models/*.pkl
+sql_injection_ml/models/
+eParty/wwwroot/models/
+
+# ================== Database ==================
 App_Data/*.mdf
 App_Data/*.ldf
 
-# ================== Machine Learning Model ==================
-*.pkl
-*.pickle
-models/
-sql_injection_*.pkl
-tfidf_*.pkl
-
-# ================== Python Flask ==================
+# ================== Python ==================
 __pycache__/
 *.pyc
 *.pyo
-*.pyd
-.Python
-env/
 venv/
+env/
 .venv/
-pip-log.txt
-pip-delete-this-directory.txt
 
 # ================== Logs & Temp ==================
-logs/
 *.log
+logs/
 temp/
 tmp/
 
 # ================== Other ==================
 *.DS_Store
 Thumbs.db
-*.bak
-*.tmp
