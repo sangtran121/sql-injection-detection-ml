@@ -4,13 +4,14 @@
 
 <h2>🔍 SQL Injection Batch Tester (Admin Only)</h2>
 
-<select id="testMode" class="form-control" style="width:320px; margin-bottom:10px;">
-    <option value="ml">🔬 Chỉ ML Model (như hiện tại)</option>
-    <option value="full" selected>🔥 Full Filter (Rule + ML) - Giống web thật</option>
+<label>Chọn chế độ test:</label>
+<select id="testMode" class="form-control" style="width:420px; display:inline-block; margin-bottom:15px;">
+    <option value="ml">🔬 Chỉ ML Model (như trước)</option>
+    <option value="full" selected>🔥 Full Filter (Rule + ML) - Giống hệt web thật</option>
 </select>
 
-<textarea id="payloadInput" rows="20" style="width:100%; font-family:Consolas; font-size:14px; padding:10px;"
-          placeholder="Dán payload vào đây..."></textarea>
+<textarea id="payloadInput" rows="22" style="width:100%; font-family:Consolas; font-size:14px; padding:12px;"
+          placeholder="Dán payload vào đây, mỗi dòng một payload..."></textarea>
 
 <br />
 <br />
@@ -31,7 +32,7 @@
             return;
         }
 
-        document.getElementById('testResult').innerHTML = "<p>Đang test...</p>";
+        document.getElementById('testResult').innerHTML = "<p style='color:#007bff;'>Đang test...</p>";
 
         try {
             const response = await fetch('/SqlInjectionTest/TestBatch', {
@@ -44,7 +45,7 @@
 
             const data = await response.json();
 
-            let html = `<h3>Kết quả Test (${data.total} payloads) - ${data.results[0].TestMode}</h3>`;
+            let html = `<h3>Kết quả Test (${data.total} payloads) — ${data.results[0].TestMode}</h3>`;
             html += `<table class="table table-bordered table-striped">
                         <thead><tr><th>Payload</th><th>Trạng thái</th><th>Lý do</th></tr></thead><tbody>`;
 

@@ -28,11 +28,15 @@ namespace eParty.Helpers
             "tổng chi phí", "đặt tiệc", "teambuilding công ty"
         };
 
+        // ================== RULE ĐÃ CẬP NHẬT MẠNH HƠN ==================
         private static readonly string[] DangerousPatterns = {
             "or 1=1", "'1'='1", "admin' or", "1' or '1", "union select",
             "drop table", "pg_sleep", "waitfor delay", "xp_cmdshell",
-            "information_schema", "cast((select", "0x", "/**/", "/*! ",
-            "; drop", "; delete", "; update", "benchmark(", "sleep("
+            "information_schema", "cast\\(", "convert\\(",
+            "sysobjects", "sys\\.databases", "sys\\.all_objects", "xtype='U'",
+            "information_schema\\.columns", "information_schema\\.routines",
+            "0x", "/**/", "/*! ", "; drop", "; delete", "; update",
+            "benchmark\\(", "sleep\\(", "master\\.sysdatabases"
         };
 
         public override void OnActionExecuting(ActionExecutingContext filterContext)
@@ -72,7 +76,7 @@ namespace eParty.Helpers
             base.OnActionExecuting(filterContext);
         }
 
-        // === Hai hàm này được public để Test Controller gọi được ===
+        // Hai hàm public để Test Controller gọi được
         public bool IsPureVietnameseText(string lower)
         {
             return VietnameseWhitelist.Any(w => lower.Contains(w)) &&
@@ -81,22 +85,47 @@ namespace eParty.Helpers
 
         public bool IsClearlyDangerous(string lower)
         {
-            var strongPatterns = new[]
+            // Dùng Contains cho các pattern literal (an toàn và nhanh)
+            if (lower.Contains("or 1=1") ||
+                lower.Contains("'1'='1") ||
+                lower.Contains("admin' or") ||
+                lower.Contains("1' or '1") ||
+                lower.Contains("union select") ||
+                lower.Contains("drop table") ||
+                lower.Contains("pg_sleep") ||
+                lower.Contains("waitfor delay") ||
+                lower.Contains("xp_cmdshell") ||
+                lower.Contains("information_schema") ||
+                lower.Contains("/**/") ||           // ← Sửa lỗi ở đây
+                lower.Contains("/*!") ||
+                lower.Contains("cast((select") ||
+                lower.Contains("0x") ||
+                lower.Contains("benchmark(") ||
+                lower.Contains("sleep(") ||
+                lower.Contains("; drop") ||
+                lower.Contains("; delete") ||
+                lower.Contains("; update"))
             {
-                "or 1=1", "'1'='1", "union select", "drop table", "pg_sleep",
-                "waitfor delay", "xp_cmdshell", "information_schema", "/\\*\\*/",
-                "/\\*!", "cast\\(.+as int", "0x", "benchmark\\(", "sleep\\(",
-                "admin' or", "1' or '1", ";\\s*drop", ";\\s*delete", "union\\s+/\\*\\*/select"
-            };
+                return true;
+            }
 
-            return strongPatterns.Any(p =>
-                Regex.IsMatch(lower, p, RegexOptions.IgnoreCase) ||
-                lower.Contains(p.Replace("\\", "")));
+            // Regex chỉ dùng cho pattern phức tạp
+            var regexPatterns = new[]
+            {
+        @"cast\(.+as int",
+        @"convert\(.+as int",
+        @"sysobjects",
+        @"sys\.databases",
+        @"sys\.all_objects",
+        @"xtype='U'",
+        @"union\s*/\*\*/\s*select"
+    };
+
+            return regexPatterns.Any(p => Regex.IsMatch(lower, p, RegexOptions.IgnoreCase));
         }
 
-        // Các hàm còn lại giữ nguyên (GetAllInput, CheckWithMLAsync, LogToDatabase, HandleSuspiciousRequest)
         private string GetAllInput(HttpRequestBase request)
-        { /* giữ nguyên code cũ */
+        {
             string all = "";
             if (request.Form != null)
                 foreach (var key in request.Form.AllKeys ?? Array.Empty<string>())

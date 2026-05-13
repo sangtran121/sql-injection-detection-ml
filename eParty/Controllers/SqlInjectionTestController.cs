@@ -1,4 +1,5 @@
 ﻿using eParty.Helpers;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Net.Http;
@@ -34,11 +35,13 @@ namespace eParty.Controllers
                 string reason = "An toàn";
                 double prob = 0;
 
-                if (mode == "full")
+                string lower = payload.ToLower().Trim();
+
+                if (mode == "full") // ← Test y chang Filter thật trên web
                 {
-                    string lower = payload.ToLower().Trim();
                     if (filter.IsPureVietnameseText(lower))
                     {
+                        isBlocked = false;
                         reason = "Full Filter - Text tiếng Việt an toàn";
                     }
                     else if (filter.IsClearlyDangerous(lower))
@@ -53,7 +56,7 @@ namespace eParty.Controllers
                         reason = $"Full Filter - ML Prob: {prob:F4}";
                     }
                 }
-                else // mode = "ml"
+                else // mode = "ml" (chỉ ML như trước)
                 {
                     prob = GetMLProbability(payload);
                     isBlocked = prob > 0.55;
@@ -80,14 +83,15 @@ namespace eParty.Controllers
                 using (var client = new HttpClient { Timeout = TimeSpan.FromSeconds(3) })
                 {
                     var content = new StringContent(
-                        Newtonsoft.Json.JsonConvert.SerializeObject(new { query }),
+                        JsonConvert.SerializeObject(new { query = query }),
                         Encoding.UTF8, "application/json");
 
                     var response = client.PostAsync("http://localhost:5000/predict", content).Result;
+
                     if (response.IsSuccessStatusCode)
                     {
                         var json = response.Content.ReadAsStringAsync().Result;
-                        dynamic data = Newtonsoft.Json.JsonConvert.DeserializeObject(json);
+                        dynamic data = JsonConvert.DeserializeObject(json);
                         return Convert.ToDouble(data.probability ?? 0);
                     }
                 }

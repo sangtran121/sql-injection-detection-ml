@@ -1,1 +1,41 @@
-eParty/App_Start/Startup.Auth.cs
+# ================== ASP.NET MVC ==================
+bin/
+obj/
+packages/
+.vs/
+*.user
+*.suo
+*.pdb
+App_Data/*.mdf
+App_Data/*.ldf
+
+# ================== Machine Learning Model ==================
+*.pkl
+*.pickle
+models/
+sql_injection_*.pkl
+tfidf_*.pkl
+
+# ================== Python Flask ==================
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# ================== Logs & Temp ==================
+logs/
+*.log
+temp/
+tmp/
+
+# ================== Other ==================
+*.DS_Store
+Thumbs.db
+*.bak
+*.tmp
