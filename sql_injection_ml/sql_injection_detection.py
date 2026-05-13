@@ -1,6 +1,5 @@
 # ================================================
-# SQL INJECTION DETECTION - FINAL VERSION
-# Dành cho báo cáo mentor
+# SQL INJECTION DETECTION 
 # ================================================
 
 import pandas as pd
@@ -105,11 +104,10 @@ joblib.dump(model, 'models/sql_injection_xgboost_model.pkl')
 joblib.dump(vectorizer, 'models/tfidf_vectorizer.pkl')
 print("\n✅ ĐÃ LƯU MODEL: sql_injection_xgboost_model.pkl")
 
-print("\n🎯 HOÀN THÀNH 5 BƯỚC THEO YÊU CẦU MENTOR!")
 
 
 # ================================================
-# TEST SIÊU MỞ RỘNG - 40+ CASES (FINAL STRESS TEST)
+# TEST SIÊU MỞ RỘNG - 40+ CASES 
 # ================================================
 
 print("\n" + "="*110)
@@ -145,7 +143,7 @@ def predict_sql_injection(query):
     return status, final_prob, raw_prob
 
 test_cases = [
-    # === MALICIOUS (20 cases) ===
+    # === MALICIOUS  ===
     ("SELECT * FROM users WHERE id = 1 OR 1=1 --", "Tautology Classic"),
     ("admin' OR '1'='1' #", "Login Bypass 1"),
     ("admin' OR 1=1 --", "Login Bypass 2"),
@@ -163,7 +161,7 @@ test_cases = [
     ("'; DROP TABLE users; --", "Stacked Query"),
     ("1' AND (SELECT COUNT(*) FROM users) > 0 --", "Blind SQLi"),
 
-    # === BENIGN - Rất gần với project Party-Serv-System (20+ cases) ===
+    # === BENIGN - Rất gần với project Party-Serv-System  ===
     ("Tạo bàn in đẹp cho tiệc cưới", "Text Tiếng Việt 1"),
     ("Tiệc sinh nhật bé Mai Anh 10 tuổi", "Text Tiếng Việt 2"),
     ("Menu: Gỏi cuốn - Cá kho tộ - Thịt nướng", "Menu Description"),

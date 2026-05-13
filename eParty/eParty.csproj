@@ -668,10 +668,11 @@
     <Compile Include="Controllers\HomeController.cs" />
     <Compile Include="Controllers\ManageController.cs" />
     <Compile Include="Controllers\NewsController.cs" />
+    <Compile Include="Controllers\SQLInjectionLogController.cs" />
+    <Compile Include="Controllers\SqlInjectionTestController.cs" />
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
-    <Compile Include="Helpers\SqlInjectionChecker.cs" />
     <Compile Include="Helpers\SqlInjectionFilter.cs" />
     <Compile Include="Middleware\SqlInjectionMiddleware.cs" />
     <Compile Include="Migrations\202510281609517_InitialCreate.cs" />
@@ -2213,6 +2214,8 @@
     <Content Include="Views\Home\ConfirmEmail.cshtml" />
     <Content Include="Views\Home\MenuList.cshtml" />
     <Content Include="Views\News\Details.cshtml" />
+    <Content Include="Views\SQLInjectionLog\Index.cshtml" />
+    <Content Include="Views\SqlInjectionTest\Index.cshtml" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="App_Data\" />

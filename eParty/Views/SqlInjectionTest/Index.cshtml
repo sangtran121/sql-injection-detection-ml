@@ -1,0 +1,70 @@
+﻿@{
+    ViewBag.Title = "SQL Injection Batch Tester";
+}
+
+<h2>🔍 SQL Injection Batch Tester (Admin Only)</h2>
+<p>Dán nhiều payload vào ô dưới, mỗi dòng một payload.</p>
+
+<textarea id="payloadInput" rows="20" style="width:100%; font-family:Consolas; font-size:14px; padding:10px;"
+          placeholder="Dán payload vào đây..."></textarea>
+
+<br />
+<br />
+<button onclick="runBatchTest()" class="btn btn-danger btn-lg">
+    🚀 Chạy Test Hàng Loạt
+</button>
+
+<hr />
+<div id="testResult"></div>
+
+<script>
+    async function runBatchTest() {
+        const payloadText = document.getElementById('payloadInput').value.trim();
+
+        if (!payloadText) {
+            alert("❌ Vui lòng nhập ít nhất một payload!");
+            return;
+        }
+
+        document.getElementById('testResult').innerHTML = "<p>Đang test...</p>";
+
+        try {
+            const response = await fetch('/SqlInjectionTest/TestBatch', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: 'payloads=' + encodeURIComponent(payloadText)
+            });
+
+            if (!response.ok) {
+                throw new Error('HTTP error! Status: ' + response.status);
+            }
+
+            const data = await response.json();
+
+            if (data.success) {
+                let html = `<h3>Kết quả Test (${data.total} payloads)</h3>`;
+                html += `<table class="table table-bordered table-striped">
+                            <thead><tr><th>Payload</th><th>Trạng thái</th><th>Lý do</th></tr></thead><tbody>`;
+
+                data.results.forEach(r => {
+                    const color = r.Status.includes("BỊ CHẶN") ? "red" : "green";
+                    html += `<tr>
+                                <td style="font-size:13px;">${r.Payload}</td>
+                                <td style="color:${color}; font-weight:bold;">${r.Status}</td>
+                                <td>${r.Reason}</td>
+                             </tr>`;
+                });
+
+                html += `</tbody></table>`;
+                document.getElementById('testResult').innerHTML = html;
+            } else {
+                document.getElementById('testResult').innerHTML = `<p style="color:red;">Lỗi: ${data.message}</p>`;
+            }
+        } catch (error) {
+            document.getElementById('testResult').innerHTML = `<p style="color:red;">Lỗi kết nối: ${error.message}</p>`;
+            console.error(error);
+        }
+    }
+</script>
