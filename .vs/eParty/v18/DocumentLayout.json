@@ -3,6 +3,10 @@
   "WorkspaceRootPath": "C:\\Users\\tansa\\Desktop\\ssss\\",
   "Documents": [
     {
+      "AbsoluteMoniker": "D:0:0:{42C35E6F-34F5-4E52-BB94-766F5D41C80B}|eParty\\eParty.csproj|C:\\Users\\tansa\\Desktop\\ssss\\eparty\\app_start\\startup.auth.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{42C35E6F-34F5-4E52-BB94-766F5D41C80B}|eParty\\eParty.csproj|solutionrelative:eparty\\app_start\\startup.auth.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{42C35E6F-34F5-4E52-BB94-766F5D41C80B}|eParty\\eParty.csproj|c:\\users\\tansa\\desktop\\ssss\\eparty\\controllers\\sqlinjectiontestcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{42C35E6F-34F5-4E52-BB94-766F5D41C80B}|eParty\\eParty.csproj|solutionrelative:eparty\\controllers\\sqlinjectiontestcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
@@ -11,31 +15,31 @@
       "RelativeMoniker": "D:0:0:{42C35E6F-34F5-4E52-BB94-766F5D41C80B}|eParty\\eParty.csproj|solutionrelative:eparty\\helpers\\sqlinjectionfilter.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{42C35E6F-34F5-4E52-BB94-766F5D41C80B}|eParty\\eParty.csproj|c:\\users\\tansa\\desktop\\ssss\\eparty\\views\\sqlinjectiontest\\index.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "AbsoluteMoniker": "D:0:0:{42C35E6F-34F5-4E52-BB94-766F5D41C80B}|eParty\\eParty.csproj|C:\\Users\\tansa\\Desktop\\ssss\\eparty\\views\\sqlinjectiontest\\index.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}",
       "RelativeMoniker": "D:0:0:{42C35E6F-34F5-4E52-BB94-766F5D41C80B}|eParty\\eParty.csproj|solutionrelative:eparty\\views\\sqlinjectiontest\\index.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{42C35E6F-34F5-4E52-BB94-766F5D41C80B}|eParty\\eParty.csproj|c:\\users\\tansa\\desktop\\ssss\\eparty\\controllers\\sqlinjectionlogcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{42C35E6F-34F5-4E52-BB94-766F5D41C80B}|eParty\\eParty.csproj|C:\\Users\\tansa\\Desktop\\ssss\\eparty\\controllers\\sqlinjectionlogcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{42C35E6F-34F5-4E52-BB94-766F5D41C80B}|eParty\\eParty.csproj|solutionrelative:eparty\\controllers\\sqlinjectionlogcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{42C35E6F-34F5-4E52-BB94-766F5D41C80B}|eParty\\eParty.csproj|c:\\users\\tansa\\desktop\\ssss\\eparty\\views\\sqlinjectionlog\\index.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "AbsoluteMoniker": "D:0:0:{42C35E6F-34F5-4E52-BB94-766F5D41C80B}|eParty\\eParty.csproj|C:\\Users\\tansa\\Desktop\\ssss\\eparty\\views\\sqlinjectionlog\\index.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}",
       "RelativeMoniker": "D:0:0:{42C35E6F-34F5-4E52-BB94-766F5D41C80B}|eParty\\eParty.csproj|solutionrelative:eparty\\views\\sqlinjectionlog\\index.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{42C35E6F-34F5-4E52-BB94-766F5D41C80B}|eParty\\eParty.csproj|c:\\users\\tansa\\desktop\\ssss\\eparty\\models\\addcommentviewmodel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{42C35E6F-34F5-4E52-BB94-766F5D41C80B}|eParty\\eParty.csproj|C:\\Users\\tansa\\Desktop\\ssss\\eparty\\models\\addcommentviewmodel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{42C35E6F-34F5-4E52-BB94-766F5D41C80B}|eParty\\eParty.csproj|solutionrelative:eparty\\models\\addcommentviewmodel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{42C35E6F-34F5-4E52-BB94-766F5D41C80B}|eParty\\eParty.csproj|c:\\users\\tansa\\desktop\\ssss\\eparty\\models\\accountviewmodels.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{42C35E6F-34F5-4E52-BB94-766F5D41C80B}|eParty\\eParty.csproj|C:\\Users\\tansa\\Desktop\\ssss\\eparty\\models\\accountviewmodels.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{42C35E6F-34F5-4E52-BB94-766F5D41C80B}|eParty\\eParty.csproj|solutionrelative:eparty\\models\\accountviewmodels.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{42C35E6F-34F5-4E52-BB94-766F5D41C80B}|eParty\\eParty.csproj|c:\\users\\tansa\\desktop\\ssss\\eparty\\migrations\\configuration.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{42C35E6F-34F5-4E52-BB94-766F5D41C80B}|eParty\\eParty.csproj|C:\\Users\\tansa\\Desktop\\ssss\\eparty\\migrations\\configuration.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{42C35E6F-34F5-4E52-BB94-766F5D41C80B}|eParty\\eParty.csproj|solutionrelative:eparty\\migrations\\configuration.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{42C35E6F-34F5-4E52-BB94-766F5D41C80B}|eParty\\eParty.csproj|c:\\users\\tansa\\desktop\\ssss\\eparty\\app_start\\bundleconfig.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{42C35E6F-34F5-4E52-BB94-766F5D41C80B}|eParty\\eParty.csproj|C:\\Users\\tansa\\Desktop\\ssss\\eparty\\app_start\\bundleconfig.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{42C35E6F-34F5-4E52-BB94-766F5D41C80B}|eParty\\eParty.csproj|solutionrelative:eparty\\app_start\\bundleconfig.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
@@ -43,20 +47,16 @@
       "RelativeMoniker": "D:0:0:{42C35E6F-34F5-4E52-BB94-766F5D41C80B}|eParty\\eParty.csproj|solutionrelative:eparty\\app_start\\filterconfig.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{42C35E6F-34F5-4E52-BB94-766F5D41C80B}|eParty\\eParty.csproj|c:\\users\\tansa\\desktop\\ssss\\eparty\\app_start\\identityconfig.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{42C35E6F-34F5-4E52-BB94-766F5D41C80B}|eParty\\eParty.csproj|C:\\Users\\tansa\\Desktop\\ssss\\eparty\\app_start\\identityconfig.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{42C35E6F-34F5-4E52-BB94-766F5D41C80B}|eParty\\eParty.csproj|solutionrelative:eparty\\app_start\\identityconfig.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{42C35E6F-34F5-4E52-BB94-766F5D41C80B}|eParty\\eParty.csproj|c:\\users\\tansa\\desktop\\ssss\\eparty\\models\\sqlinjectionlog.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{42C35E6F-34F5-4E52-BB94-766F5D41C80B}|eParty\\eParty.csproj|C:\\Users\\tansa\\Desktop\\ssss\\eparty\\models\\sqlinjectionlog.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{42C35E6F-34F5-4E52-BB94-766F5D41C80B}|eParty\\eParty.csproj|solutionrelative:eparty\\models\\sqlinjectionlog.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{42C35E6F-34F5-4E52-BB94-766F5D41C80B}|eParty\\eParty.csproj|C:\\Users\\tansa\\Desktop\\ssss\\eparty\\middleware\\sqlinjectionmiddleware.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{42C35E6F-34F5-4E52-BB94-766F5D41C80B}|eParty\\eParty.csproj|solutionrelative:eparty\\middleware\\sqlinjectionmiddleware.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{42C35E6F-34F5-4E52-BB94-766F5D41C80B}|eParty\\eParty.csproj|C:\\Users\\tansa\\Desktop\\ssss\\eparty\\app_start\\startup.auth.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{42C35E6F-34F5-4E52-BB94-766F5D41C80B}|eParty\\eParty.csproj|solutionrelative:eparty\\app_start\\startup.auth.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{42C35E6F-34F5-4E52-BB94-766F5D41C80B}|eParty\\eParty.csproj|C:\\Users\\tansa\\Desktop\\ssss\\eparty\\models\\appdbcontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -70,37 +70,24 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 1,
+          "SelectedChildIndex": 11,
           "Children": [
             {
               "$type": "Document",
-              "DocumentIndex": 2,
-              "Title": "Index.cshtml",
-              "DocumentMoniker": "C:\\Users\\tansa\\Desktop\\ssss\\eParty\\Views\\SqlInjectionTest\\Index.cshtml",
-              "RelativeDocumentMoniker": "eParty\\Views\\SqlInjectionTest\\Index.cshtml",
-              "ToolTip": "C:\\Users\\tansa\\Desktop\\ssss\\eParty\\Views\\SqlInjectionTest\\Index.cshtml",
-              "RelativeToolTip": "eParty\\Views\\SqlInjectionTest\\Index.cshtml",
-              "ViewState": "AgIAAAwAAAAAAAAAAAAqwC0AAAAfAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
-              "WhenOpened": "2026-05-12T23:46:33.464Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 1,
               "Title": "SqlInjectionTestController.cs",
               "DocumentMoniker": "C:\\Users\\tansa\\Desktop\\ssss\\eParty\\Controllers\\SqlInjectionTestController.cs",
               "RelativeDocumentMoniker": "eParty\\Controllers\\SqlInjectionTestController.cs",
               "ToolTip": "C:\\Users\\tansa\\Desktop\\ssss\\eParty\\Controllers\\SqlInjectionTestController.cs",
               "RelativeToolTip": "eParty\\Controllers\\SqlInjectionTestController.cs",
-              "ViewState": "AgIAAC0AAAAAAAAAAAAowBgAAAAmAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABgAAAAmAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-05-12T23:45:39.45Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 5,
+              "DocumentIndex": 6,
               "Title": "AddCommentViewModel.cs",
               "DocumentMoniker": "C:\\Users\\tansa\\Desktop\\ssss\\eParty\\Models\\AddCommentViewModel.cs",
               "RelativeDocumentMoniker": "eParty\\Models\\AddCommentViewModel.cs",
@@ -108,12 +95,11 @@
               "RelativeToolTip": "eParty\\Models\\AddCommentViewModel.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-05-12T23:07:58.3Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-05-12T23:07:58.3Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 6,
+              "DocumentIndex": 7,
               "Title": "AccountViewModels.cs",
               "DocumentMoniker": "C:\\Users\\tansa\\Desktop\\ssss\\eParty\\Models\\AccountViewModels.cs",
               "RelativeDocumentMoniker": "eParty\\Models\\AccountViewModels.cs",
@@ -121,12 +107,11 @@
               "RelativeToolTip": "eParty\\Models\\AccountViewModels.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-05-12T23:07:54.67Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-05-12T23:07:54.67Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 7,
+              "DocumentIndex": 8,
               "Title": "Configuration.cs",
               "DocumentMoniker": "C:\\Users\\tansa\\Desktop\\ssss\\eParty\\Migrations\\Configuration.cs",
               "RelativeDocumentMoniker": "eParty\\Migrations\\Configuration.cs",
@@ -134,12 +119,11 @@
               "RelativeToolTip": "eParty\\Migrations\\Configuration.cs",
               "ViewState": "AgIAAB0AAAAAAAAAAAAQwAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-05-12T23:07:44.656Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-05-12T23:07:44.656Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 8,
+              "DocumentIndex": 9,
               "Title": "BundleConfig.cs",
               "DocumentMoniker": "C:\\Users\\tansa\\Desktop\\ssss\\eParty\\App_Start\\BundleConfig.cs",
               "RelativeDocumentMoniker": "eParty\\App_Start\\BundleConfig.cs",
@@ -147,12 +131,11 @@
               "RelativeToolTip": "eParty\\App_Start\\BundleConfig.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-05-12T23:07:38.552Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-05-12T23:07:38.552Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 10,
+              "DocumentIndex": 11,
               "Title": "IdentityConfig.cs",
               "DocumentMoniker": "C:\\Users\\tansa\\Desktop\\ssss\\eParty\\App_Start\\IdentityConfig.cs",
               "RelativeDocumentMoniker": "eParty\\App_Start\\IdentityConfig.cs",
@@ -160,12 +143,11 @@
               "RelativeToolTip": "eParty\\App_Start\\IdentityConfig.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-05-12T23:07:36.631Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-05-12T23:07:36.631Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 4,
+              "DocumentIndex": 5,
               "Title": "Index.cshtml",
               "DocumentMoniker": "C:\\Users\\tansa\\Desktop\\ssss\\eParty\\Views\\SQLInjectionLog\\Index.cshtml",
               "RelativeDocumentMoniker": "eParty\\Views\\SQLInjectionLog\\Index.cshtml",
@@ -173,12 +155,11 @@
               "RelativeToolTip": "eParty\\Views\\SQLInjectionLog\\Index.cshtml",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAACAAAABeAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
-              "WhenOpened": "2026-05-12T23:06:40.728Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-05-12T23:06:40.728Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 4,
               "Title": "SQLInjectionLogController.cs",
               "DocumentMoniker": "C:\\Users\\tansa\\Desktop\\ssss\\eParty\\Controllers\\SQLInjectionLogController.cs",
               "RelativeDocumentMoniker": "eParty\\Controllers\\SQLInjectionLogController.cs",
@@ -186,8 +167,7 @@
               "RelativeToolTip": "eParty\\Controllers\\SQLInjectionLogController.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAkAAAAFAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-05-12T23:05:10.678Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-05-12T23:05:10.678Z"
             },
             {
               "$type": "Document",
@@ -203,7 +183,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 11,
+              "DocumentIndex": 12,
               "Title": "SQLInjectionLog.cs",
               "DocumentMoniker": "C:\\Users\\tansa\\Desktop\\ssss\\eParty\\Models\\SQLInjectionLog.cs",
               "RelativeDocumentMoniker": "eParty\\Models\\SQLInjectionLog.cs",
@@ -211,12 +191,11 @@
               "RelativeToolTip": "eParty\\Models\\SQLInjectionLog.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABkAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-05-05T11:44:56.309Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-05-05T11:44:56.309Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 2,
               "Title": "SqlInjectionFilter.cs",
               "DocumentMoniker": "C:\\Users\\tansa\\Desktop\\ssss\\eParty\\Helpers\\SqlInjectionFilter.cs",
               "RelativeDocumentMoniker": "eParty\\Helpers\\SqlInjectionFilter.cs",
@@ -224,12 +203,36 @@
               "RelativeToolTip": "eParty\\Helpers\\SqlInjectionFilter.cs",
               "ViewState": "AgIAAEQAAAAAAAAAAAAgwGIAAAA1AAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-05-05T04:38:12.017Z",
+              "WhenOpened": "2026-05-05T04:38:12.017Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "Startup.Auth.cs",
+              "DocumentMoniker": "C:\\Users\\tansa\\Desktop\\ssss\\eParty\\App_Start\\Startup.Auth.cs",
+              "RelativeDocumentMoniker": "eParty\\App_Start\\Startup.Auth.cs",
+              "ToolTip": "C:\\Users\\tansa\\Desktop\\ssss\\eParty\\App_Start\\Startup.Auth.cs",
+              "RelativeToolTip": "eParty\\App_Start\\Startup.Auth.cs",
+              "ViewState": "AgIAAA8AAAAAAAAAAAAAAC0AAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-05T04:34:10.438Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 9,
+              "DocumentIndex": 3,
+              "Title": "Index.cshtml",
+              "DocumentMoniker": "C:\\Users\\tansa\\Desktop\\ssss\\eParty\\Views\\SqlInjectionTest\\Index.cshtml",
+              "RelativeDocumentMoniker": "eParty\\Views\\SqlInjectionTest\\Index.cshtml",
+              "ToolTip": "C:\\Users\\tansa\\Desktop\\ssss\\eParty\\Views\\SqlInjectionTest\\Index.cshtml",
+              "RelativeToolTip": "eParty\\Views\\SqlInjectionTest\\Index.cshtml",
+              "ViewState": "AgIAAAwAAAAAAAAAAAAqwC0AAAAfAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
+              "WhenOpened": "2026-05-12T23:46:33.464Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 10,
               "Title": "FilterConfig.cs",
               "DocumentMoniker": "C:\\Users\\tansa\\Desktop\\ssss\\eParty\\App_Start\\FilterConfig.cs",
               "RelativeDocumentMoniker": "eParty\\App_Start\\FilterConfig.cs",
@@ -237,24 +240,11 @@
               "RelativeToolTip": "eParty\\App_Start\\FilterConfig.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAA8AAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-05-05T04:36:12.462Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-05-05T04:36:12.462Z"
             },
             {
               "$type": "Document",
               "DocumentIndex": 13,
-              "Title": "Startup.Auth.cs",
-              "DocumentMoniker": "C:\\Users\\tansa\\Desktop\\ssss\\eParty\\App_Start\\Startup.Auth.cs",
-              "RelativeDocumentMoniker": "eParty\\App_Start\\Startup.Auth.cs",
-              "ToolTip": "C:\\Users\\tansa\\Desktop\\ssss\\eParty\\App_Start\\Startup.Auth.cs",
-              "RelativeToolTip": "eParty\\App_Start\\Startup.Auth.cs",
-              "ViewState": "AgIAAA8AAAAAAAAAAAAAACkAAABEAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-05-05T04:34:10.438Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 12,
               "Title": "SqlInjectionMiddleware.cs",
               "DocumentMoniker": "C:\\Users\\tansa\\Desktop\\ssss\\eParty\\Middleware\\SqlInjectionMiddleware.cs",
               "RelativeDocumentMoniker": "eParty\\Middleware\\SqlInjectionMiddleware.cs",
