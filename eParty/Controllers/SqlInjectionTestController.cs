@@ -35,32 +35,47 @@ namespace eParty.Controllers
                 string reason = "An toàn";
                 double prob = 0;
 
-                string lower = payload.ToLower().Trim();
+                // [FIX] Normalize input giống hệt SqlInjectionFilter.OnActionExecuting
+                // → decode URL encoding, loại /**/,  trước khi check
+                // Nếu không normalize ở đây, kết quả test sẽ lệch với filter thật
+                // [FIX] Check raw trước (giống OnActionExecuting): bắt /*! */ trước khi strip
+                string rawLower = payload.ToLower();
+                string normalizedPayload = filter.NormalizeInput(payload);
+                string lower = normalizedPayload.ToLower().Trim();
 
-                if (mode == "full") // ← Test y chang Filter thật trên web
+                if (mode == "full")
                 {
-                    if (filter.IsPureVietnameseText(lower))
+                    // Bước 0: check raw để bắt /*! pattern trước khi strip comment
+                    if (filter.IsClearlyDangerous(rawLower))
                     {
-                        isBlocked = false;
-                        reason = "Full Filter - Text tiếng Việt an toàn";
+                        isBlocked = true;
+                        reason = "Full Filter - Rule-based chặn (raw)";
                     }
+                    // Bước 1: check normalized
                     else if (filter.IsClearlyDangerous(lower))
                     {
                         isBlocked = true;
                         reason = "Full Filter - Rule-based chặn";
                     }
+                    else if (filter.IsPureVietnameseText(lower))
+                    {
+                        isBlocked = false;
+                        reason = "Full Filter - Text tiếng Việt an toàn";
+                    }
                     else
                     {
-                        prob = GetMLProbability(payload);
+                        prob = GetMLProbability(normalizedPayload);
                         isBlocked = prob > 0.55;
-                        reason = $"Full Filter - ML Prob: {prob:F4}";
+                        reason = isBlocked
+                            ? $"Full Filter - ML chặn (prob={prob:F4})"
+                            : $"Full Filter - ML cho qua (prob={prob:F4})";
                     }
                 }
-                else // mode = "ml" (chỉ ML như trước)
+                else // mode = "ml"
                 {
-                    prob = GetMLProbability(payload);
+                    prob = GetMLProbability(normalizedPayload);
                     isBlocked = prob > 0.55;
-                    reason = $"Only ML (Prob: {prob:F4})";
+                    reason = $"Only ML (prob={prob:F4})";
                 }
 
                 results.Add(new
@@ -84,7 +99,8 @@ namespace eParty.Controllers
                 {
                     var content = new StringContent(
                         JsonConvert.SerializeObject(new { query = query }),
-                        Encoding.UTF8, "application/json");
+                        Encoding.UTF8,
+                        "application/json");
 
                     var response = client.PostAsync("http://localhost:5000/predict", content).Result;
 
@@ -92,11 +108,12 @@ namespace eParty.Controllers
                     {
                         var json = response.Content.ReadAsStringAsync().Result;
                         dynamic data = JsonConvert.DeserializeObject(json);
-                        return Convert.ToDouble(data.probability ?? 0);
+                        return Convert.ToDouble(data?.probability ?? 0);
                     }
                 }
             }
             catch { }
+
             return 0;
         }
     }
