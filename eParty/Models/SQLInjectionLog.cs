@@ -22,5 +22,11 @@ namespace eParty.Models
         public string UserAgent { get; set; }
 
         public bool IsBlocked { get; set; } = true;
+
+        // ================== CÁC CỘT MỚI ==================
+        public double? Probability { get; set; }          // Xác suất từ ML Model
+        public string DetectedBy { get; set; }            // "Rule-based" hoặc "ML Model"
+        public string RequestMethod { get; set; }         // GET / POST
+        public string UserId { get; set; }                // Nếu có user đăng nhập
     }
 }

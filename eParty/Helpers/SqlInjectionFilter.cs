@@ -1,6 +1,7 @@
 ﻿using eParty.Models;
 using Newtonsoft.Json;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
@@ -74,11 +75,14 @@ namespace eParty.Helpers
                 return;
             }
 
+            // ================== WHITELIST ĐỘNG - Ưu tiên cao nhất ==================
+            if (IsInDynamicWhitelist(rawInput))
+            {
+                base.OnActionExecuting(filterContext);
+                return;
+            }
+
             // [FIX] Bước 0: Check raw input (chưa strip comment) trước
-            // Lý do: "Tiệc cưới đẹp' /*! OR 1=1 */ --"
-            //   → Sau normalize: "Tiệc cưới đẹp' --" (/*! OR 1=1 */ bị strip)
-            //   → IsClearlyDangerous không thấy gì → IsPureVietnameseText match → CHO QUA ❌
-            //   → Phải check "/*!" trên raw input TRƯỚC KHI strip
             string rawLower = rawInput.ToLower();
             if (IsClearlyDangerous(rawLower))
             {
@@ -87,11 +91,11 @@ namespace eParty.Helpers
                 return;
             }
 
-            // Normalize: decode URL encoding + strip SQL comments
+            // Normalize input
             string normalizedInput = NormalizeInput(rawInput);
             string lower = normalizedInput.ToLower().Trim();
 
-            // Lớp 1: Rule-based trên input đã normalize (bắt các pattern sau decode URL)
+            // Lớp 1: Rule-based trên normalized input
             if (IsClearlyDangerous(lower))
             {
                 LogToDatabase(filterContext, rawInput, "Rule-based (normalized)");
@@ -99,17 +103,14 @@ namespace eParty.Helpers
                 return;
             }
 
-            // Lớp 2: Whitelist tiếng Việt — chỉ cho qua khi không còn gì nguy hiểm
+            // Lớp 2: Whitelist tiếng Việt
             if (IsPureVietnameseText(lower))
             {
                 base.OnActionExecuting(filterContext);
                 return;
             }
 
-            // Lớp 3: ML Model (bất đồng bộ)
-            // [CẢI THIỆN] Chạy ML check đồng bộ thay vì fire-and-forget
-            // Fix race condition: bản cũ dùng Task.Run rồi base.OnActionExecuting ngay lập tức
-            // → request vẫn đi qua dù ML phát hiện tấn công
+            // Lớp 3: ML Model
             bool mlBlocked = CheckWithML(normalizedInput, filterContext);
             if (mlBlocked) return;
 
@@ -265,6 +266,31 @@ namespace eParty.Helpers
                 },
                 JsonRequestBehavior = JsonRequestBehavior.AllowGet
             };
+        }
+        // ================== WHITELIST ĐỘNG (từ Dashboard) ==================
+        private static readonly List<string> DynamicWhitelist = new List<string>();
+
+        public static void AddToWhitelist(string payload)
+        {
+            if (string.IsNullOrWhiteSpace(payload)) return;
+            string clean = payload.Trim();
+            if (!DynamicWhitelist.Contains(clean))
+            {
+                DynamicWhitelist.Add(clean);
+                System.Diagnostics.Debug.WriteLine($"[WHITELIST] Đã thêm: {clean}");
+            }
+        }
+
+        public static void ClearDynamicWhitelist()
+        {
+            DynamicWhitelist.Clear();
+        }
+
+        private bool IsInDynamicWhitelist(string input)
+        {
+            if (string.IsNullOrWhiteSpace(input)) return false;
+            string lower = input.ToLower().Trim();
+            return DynamicWhitelist.Any(w => lower.Contains(w.ToLower()));
         }
     }
 }

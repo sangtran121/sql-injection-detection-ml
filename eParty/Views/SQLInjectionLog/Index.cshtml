@@ -6,14 +6,30 @@
 
 <h2>🔍 SQL Injection Detection Logs</h2>
 
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success">@TempData["Success"]</div>
+}
+
+<!-- NÚT LỌC THAY VÌ TÌM KIẾM -->
+<div class="btn-group" style="margin-bottom:15px;">
+    <a href="@Url.Action("Index")" class="btn btn-default @(ViewBag.CurrentFilter == "all" ? "active" : "")">Tất cả</a>
+    <a href="@Url.Action("Index", new { filter = "rule" })" class="btn btn-default @(ViewBag.CurrentFilter == "rule" ? "active" : "")">Rule-based</a>
+    <a href="@Url.Action("Index", new { filter = "ml" })" class="btn btn-default @(ViewBag.CurrentFilter == "ml" ? "active" : "")">ML Model</a>
+    <a href="@Url.Action("Index", new { filter = "blocked" })" class="btn btn-default @(ViewBag.CurrentFilter == "blocked" ? "active" : "")">Đã chặn</a>
+</div>
+
 <table class="table table-striped table-hover">
     <thead>
         <tr>
-            <th>Thời gian</th>
-            <th>IP Address</th>
-            <th>URL</th>
+            <th style="width:140px;">Thời gian</th>
+            <th style="width:110px;">IP Address</th>
+            <th style="width:180px;">URL</th>
             <th>Payload</th>
-            <th>Controller/Action</th>
+            <th style="width:130px;">Phát hiện bởi</th>
+            <th style="width:100px;">Xác suất</th>
+            <th style="width:90px;">Trạng thái</th>
+            <th style="width:140px;">Thao tác</th>
         </tr>
     </thead>
     <tbody>
@@ -22,9 +38,61 @@
             <tr>
                 <td>@log.Timestamp.ToString("dd/MM/yyyy HH:mm:ss")</td>
                 <td><strong>@log.IpAddress</strong></td>
-                <td>@log.Url</td>
-                <td style="color:red; font-family:monospace;">@log.SuspiciousInput</td>
-                <td>@log.Controller / @log.Action</td>
+                <td style="font-size:13px;">@log.Url</td>
+                <td style="max-width:420px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; font-family:Consolas; font-size:13px;">
+                    <span title="@log.SuspiciousInput" style="cursor:help;">
+                        @if (log.SuspiciousInput.Length > 80)
+                        {
+                            @(log.SuspiciousInput.Substring(0, 77) + "...")
+                        }
+                        else
+                        {
+                            @log.SuspiciousInput
+                        }
+                    </span>
+                </td>
+                <td>@(log.DetectedBy ?? "Rule-based")</td>
+                <td style="font-weight:bold;">
+                    @if (log.Probability.HasValue)
+                    {
+                        <span style="color:@(log.Probability.Value > 0.7 ? "red" : "orange")">
+                            @(log.Probability.Value.ToString("P2"))
+                        </span>
+                    }
+                    else
+                    {
+                        <span class="text-muted">-</span>
+                    }
+                </td>
+                <td>
+                    @if (log.IsBlocked)
+                    {
+                        <span class="label label-danger">ĐÃ CHẶN</span>
+                    }
+                    else
+                    {
+                        <span class="label label-success">Cho qua</span>
+                    }
+                </td>
+                <td>
+                    @using (Html.BeginForm("Delete", "SQLInjectionLog", new { id = log.Id }, FormMethod.Post, new { @class = "inline-form" }))
+                    {
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-danger btn-xs"
+                                onclick="return confirm('Xóa log này?');">
+                            🗑 Xóa
+                        </button>
+                    }
+                    &nbsp;
+                    @using (Html.BeginForm("AddToWhitelist", "SQLInjectionLog", new { id = log.Id }, FormMethod.Post, new { @class = "inline-form" }))
+                    {
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-success btn-xs"
+                                onclick="return confirm('Cho phép payload này vĩnh viễn (bỏ qua Rule và ML)?');">
+                            ✅ Cho phép
+                        </button>
+                    }
+                </td>
             </tr>
         }
     </tbody>
