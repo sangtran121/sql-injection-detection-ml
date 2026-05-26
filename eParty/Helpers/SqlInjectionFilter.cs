@@ -256,17 +256,7 @@ namespace eParty.Helpers
             catch { /* Không để lỗi log crash website */ }
         }
 
-        private void HandleSuspiciousRequest(ActionExecutingContext filterContext)
-        {
-            string suspiciousInput = GetAllInput(filterContext.HttpContext.Request);
-
-            filterContext.HttpContext.Response.StatusCode = 403;
-            filterContext.Result = new ViewResult
-            {
-                ViewName = "~/Views/Shared/SQLInjectionBlocked.cshtml",
-                ViewData = new ViewDataDictionary { { "SuspiciousInput", suspiciousInput } }
-            };
-        }
+ 
         // ================== WHITELIST ĐỘNG (từ Dashboard) ==================
         private static readonly List<string> DynamicWhitelist = new List<string>();
 
@@ -291,6 +281,59 @@ namespace eParty.Helpers
             if (string.IsNullOrWhiteSpace(input)) return false;
             string lower = input.ToLower().Trim();
             return DynamicWhitelist.Any(w => lower.Contains(w.ToLower()));
+        }
+        private void HandleSuspiciousRequest(ActionExecutingContext filterContext)
+        {
+            var request = filterContext.HttpContext.Request;
+            string suspiciousInput = GetAllInput(request);
+            string returnUrl = request.RawUrl;
+            string method = request.HttpMethod;
+
+            // Serialize form data để replay sau khi whitelist
+            var formDict = new System.Collections.Generic.Dictionary<string, string>();
+            if (request.Form != null)
+                foreach (var key in request.Form.AllKeys ?? new string[0])
+                    formDict[key] = request.Form[key];
+
+            string formDataJson = Newtonsoft.Json.JsonConvert.SerializeObject(formDict);
+
+            string token = SavePendingToken(suspiciousInput, returnUrl);
+
+            filterContext.HttpContext.Response.StatusCode = 403;
+            filterContext.Result = new ViewResult
+            {
+                ViewName = "~/Views/Shared/SQLInjectionBlocked.cshtml",
+                ViewData = new ViewDataDictionary
+        {
+            { "SuspiciousInput", suspiciousInput },
+            { "Token",     token       },
+            { "ReturnUrl", returnUrl   },
+            { "Method",    method      },
+            { "FormData",  formDataJson }
+        }
+            };
+        }
+
+        private string SavePendingToken(string payload, string returnUrl)
+        {
+            try
+            {
+                string token = Guid.NewGuid().ToString("N").Substring(0, 12);
+                using (var db = new AppDbContext())
+                {
+                    db.PendingWhitelists.Add(new PendingWhitelist
+                    {
+                        Payload = payload,
+                        Token = token,
+                        ReturnUrl = returnUrl,
+                        CreatedAt = DateTime.Now,
+                        IsUsed = false
+                    });
+                    db.SaveChanges();
+                }
+                return token;
+            }
+            catch { return ""; }
         }
     }
 }

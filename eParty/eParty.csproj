@@ -688,6 +688,10 @@
     <Compile Include="Migrations\202605261351311_AddPendingWhitelist.Designer.cs">
       <DependentUpon>202605261351311_AddPendingWhitelist.cs</DependentUpon>
     </Compile>
+    <Compile Include="Migrations\202605261854273_AddReturnUrl.cs" />
+    <Compile Include="Migrations\202605261854273_AddReturnUrl.Designer.cs">
+      <DependentUpon>202605261854273_AddReturnUrl.cs</DependentUpon>
+    </Compile>
     <Compile Include="Migrations\Configuration.cs" />
     <Compile Include="Models\AccountViewModels.cs" />
     <Compile Include="Models\AppDbContext.cs" />
@@ -2273,6 +2277,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Migrations\202605261351311_AddPendingWhitelist.resx">
       <DependentUpon>202605261351311_AddPendingWhitelist.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\202605261854273_AddReturnUrl.resx">
+      <DependentUpon>202605261854273_AddReturnUrl.cs</DependentUpon>
     </EmbeddedResource>
   </ItemGroup>
   <PropertyGroup>

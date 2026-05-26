@@ -12,18 +12,11 @@ namespace eParty.Helpers
         private static readonly string BotToken = "8859783946:AAGToRsMaTgWvbHKbmyYnY6IzyxU-zO6ogU";
         private static readonly string ChatId = "6343263182";
 
-        public static async Task<bool> SendAlert(string payload, string ip, string time)
+        public static async Task<bool> SendAlert(string payload, string ip, string time, string token)
         {
             try
             {
-                string token = SavePendingWhitelist(payload);
-
-                // Payload đầy đủ, chỉ escape ký tự Markdown
-                string safePayload = payload
-                    .Replace("`", "'")
-                    .Replace("\\", "\\\\");
-
-                // Giới hạn 800 ký tự để Telegram không từ chối (max 4096)
+                string safePayload = payload.Replace("`", "'");
                 if (safePayload.Length > 800)
                     safePayload = safePayload.Substring(0, 800) + "\n...";
 
@@ -41,11 +34,11 @@ namespace eParty.Helpers
                     {
                         inline_keyboard = new object[][]
                         {
-                            new object[]
-                            {
-                                new { text = "✅ Whitelist payload này", callback_data = $"whitelist:{token}" },
-                                new { text = "❌ Bỏ qua",               callback_data = $"ignore:{token}"   }
-                            }
+                    new object[]
+                    {
+                        new { text = "✅ Whitelist payload này", callback_data = $"whitelist:{token}" },
+                        new { text = "❌ Bỏ qua",               callback_data = $"ignore:{token}"   }
+                    }
                         }
                     }
                 };

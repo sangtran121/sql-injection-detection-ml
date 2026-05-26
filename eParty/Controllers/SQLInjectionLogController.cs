@@ -62,28 +62,7 @@ namespace eParty.Controllers
             }
             return RedirectToAction("Index");
         }
-        // Gửi báo cáo lên Telegram
-        [HttpGet]
-        [AllowAnonymous]
-        public async Task<ActionResult> ReportFalsePositive(string payload)
-        {
-            if (string.IsNullOrEmpty(payload))
-            {
-                TempData["Error"] = "Không có payload để báo cáo.";
-                return RedirectToAction("Index");
-            }
-
-            string ip = HttpContext.Request.UserHostAddress ?? "Unknown";
-            string time = DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss");
-
-            bool sent = await TelegramHelper.SendAlert(payload, ip, time);
-
-            TempData["Success"] = sent
-                ? "✅ Đã gửi báo cáo đến Admin qua Telegram."
-                : "❌ Gửi Telegram thất bại.";
-
-            return RedirectToAction("Index");
-        }
+   
 
         // Admin bấm link trong Telegram → whitelist
         [HttpGet]
@@ -127,6 +106,44 @@ namespace eParty.Controllers
             TempData["Success"] = "✅ Payload đã được WHITELIST thành công! Hệ thống sẽ cho qua payload này từ bây giờ.";
 
             return RedirectToAction("Index");
+        }
+        // Nhận token từ View, gửi Telegram
+       
+        [HttpGet]
+        [AllowAnonymous]
+        public async Task<ActionResult> ReportFalsePositive(string token)
+        {
+            if (string.IsNullOrEmpty(token))
+                return Json(new { success = false }, JsonRequestBehavior.AllowGet);
+
+            using (var db = new AppDbContext())
+            {
+                var pending = db.PendingWhitelists.FirstOrDefault(p => p.Token == token && !p.IsUsed);
+                if (pending == null)
+                    return Json(new { success = false }, JsonRequestBehavior.AllowGet);
+
+                string ip = HttpContext.Request.UserHostAddress ?? "Unknown";
+                string time = DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss");
+                bool sent = await TelegramHelper.SendAlert(pending.Payload, ip, time, token);
+
+                return Json(new { success = sent }, JsonRequestBehavior.AllowGet);
+            }
+        }
+
+        // Polling: kiểm tra xem token đã được whitelist chưa
+        [HttpGet]
+        [AllowAnonymous]
+        public ActionResult CheckWhitelisted(string token)
+        {
+            if (string.IsNullOrEmpty(token))
+                return Json(new { whitelisted = false }, JsonRequestBehavior.AllowGet);
+
+            using (var db = new AppDbContext())
+            {
+                var pending = db.PendingWhitelists.FirstOrDefault(p => p.Token == token);
+                bool whitelisted = pending != null && pending.IsUsed;
+                return Json(new { whitelisted }, JsonRequestBehavior.AllowGet);
+            }
         }
     }
 

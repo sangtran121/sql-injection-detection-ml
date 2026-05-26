@@ -1,6 +1,11 @@
 ﻿@{
     ViewBag.Title = "Yêu cầu bị chặn";
     Layout = null;
+    string token = ViewData["Token"]?.ToString() ?? "";
+    string returnUrl = ViewData["ReturnUrl"]?.ToString() ?? "/";
+    string method = ViewData["Method"]?.ToString() ?? "GET";
+    // FormData được serialize thành JSON từ server
+    string formDataJson = ViewData["FormData"]?.ToString() ?? "{}";
 }
 
 <!DOCTYPE html>
@@ -9,10 +14,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Bảo mật - Yêu cầu bị chặn</title>
-
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-
     <style>
         body {
             margin: 0;
@@ -45,35 +48,38 @@
 
         @@keyframes shieldPulse {
             0%, 100% {
-                transform: scale(1);
+                transform: scale(1)
             }
 
             50% {
-                transform: scale(1.08);
+                transform: scale(1.08)
             }
         }
 
         h1 {
-            font-size: 2.4rem;
+            font-size: 2rem;
             margin: 0 0 12px 0;
             font-weight: 600;
         }
 
         p {
-            font-size: 1.1rem;
+            font-size: 1rem;
             opacity: 0.9;
             line-height: 1.6;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
         }
 
         .btn {
             display: inline-block;
-            padding: 14px 32px;
+            padding: 12px 28px;
             margin: 8px;
             border-radius: 50px;
             font-weight: 600;
             text-decoration: none;
             transition: all 0.3s;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
         }
 
         .btn-primary {
@@ -81,29 +87,48 @@
             color: #1e40af;
         }
 
-            .btn-primary:hover {
-                transform: translateY(-3px);
-                box-shadow: 0 10px 20px rgba(0,0,0,0.2);
-            }
-
         .btn-secondary {
             background: transparent;
             color: white;
             border: 2px solid rgba(255,255,255,0.6);
         }
 
-            .btn-secondary:hover {
-                background: rgba(255,255,255,0.1);
-            }
-
         .btn-warning {
             background: #f59e0b;
             color: white;
         }
 
-            .btn-warning:hover {
-                background: #d97706;
+            .btn-warning:disabled {
+                opacity: 0.6;
+                cursor: not-allowed;
             }
+
+        .status-box {
+            margin-top: 20px;
+            padding: 14px 20px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 12px;
+            font-size: 0.95rem;
+            display: none;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,0.5);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        @@keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
     </style>
 </head>
 <body>
@@ -111,8 +136,8 @@
         <div class="icon">🛡️</div>
         <h1>Yêu cầu của bạn đã bị chặn</h1>
         <p>
-            Hệ thống bảo mật đã phát hiện hành vi đáng ngờ (SQL Injection).<br>
-            Để bảo vệ dữ liệu, yêu cầu này đã bị từ chối.
+            Hệ thống phát hiện hành vi đáng ngờ (SQL Injection).<br>
+            Nếu đây là nhầm lẫn, hãy báo cáo để Admin xem xét.
         </p>
 
         <div>
@@ -120,17 +145,103 @@
                 <i class="fas fa-arrow-left"></i> Quay lại
             </a>
             <a href="/" class="btn btn-secondary">
-                <i class="fas fa-home"></i> Về Trang chủ
+                <i class="fas fa-home"></i> Trang chủ
             </a>
-            <a href="/SQLInjectionLog/ReportFalsePositive?payload=@(ViewData["SuspiciousInput"] != null ? HttpUtility.UrlEncode(ViewData["SuspiciousInput"].ToString()) : "")"
-               class="btn btn-warning">
-                <i class="fas fa-flag"></i> Báo cáo Sai cho Admin
-            </a>
+            @if (!string.IsNullOrEmpty(token))
+            {
+                <button id="reportBtn" onclick="reportAndWait()" class="btn btn-warning">
+                    <i class="fas fa-flag"></i> Báo cáo Sai cho Admin
+                </button>
+            }
         </div>
 
-        <div class="footer" style="margin-top:40px; font-size:0.9rem; opacity:0.7;">
-            Powered by <strong>eParty Security</strong>
+        <div class="status-box" id="statusBox">
+            <span class="spinner" id="spinner"></span>
+            <span id="statusText">Đang gửi báo cáo...</span>
         </div>
     </div>
+
+    <!-- Form ẩn để replay request gốc sau khi whitelist -->
+    <form id="replayForm" method="@method" action="@returnUrl" style="display:none"></form>
+
+    <script>
+        var token      = "@token";
+        var returnUrl  = "@Html.Raw(returnUrl)";
+        var method     = "@method";
+        var formData   = @Html.Raw(formDataJson);
+        var pollTimer  = null;
+        var reported   = false;
+
+        function reportAndWait() {
+            if (reported) return;
+            reported = true;
+
+            var btn = document.getElementById('reportBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang gửi...';
+
+            showStatus('Đang gửi báo cáo đến Admin...');
+
+            fetch('/SQLInjectionLog/ReportFalsePositive?token=' + token)
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.success) {
+                        showStatus('✅ Đã gửi! Đang chờ Admin phê duyệt...');
+                        startPolling();
+                    } else {
+                        showStatus('❌ Gửi thất bại. Vui lòng thử lại.');
+                        btn.disabled = false;
+                        btn.innerHTML = '<i class="fas fa-flag"></i> Báo cáo Sai cho Admin';
+                        reported = false;
+                    }
+                })
+                .catch(function() {
+                    showStatus('❌ Lỗi kết nối.');
+                    btn.disabled = false;
+                    reported = false;
+                });
+        }
+
+        function startPolling() {
+            pollTimer = setInterval(function() {
+                fetch('/SQLInjectionLog/CheckWhitelisted?token=' + token)
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        if (data.whitelisted) {
+                            clearInterval(pollTimer);
+                            showStatus('✅ Admin đã phê duyệt! Đang thực hiện lại yêu cầu...');
+                            setTimeout(replayOriginalRequest, 800);
+                        }
+                    });
+            }, 3000);
+        }
+
+        function replayOriginalRequest() {
+            var form = document.getElementById('replayForm');
+
+            if (method.toUpperCase() === 'GET') {
+                // GET: redirect thẳng về URL gốc
+                window.location.href = returnUrl;
+            } else {
+                // POST: dựng lại form với toàn bộ dữ liệu gốc rồi submit
+                for (var key in formData) {
+                    if (formData.hasOwnProperty(key)) {
+                        var input = document.createElement('input');
+                        input.type  = 'hidden';
+                        input.name  = key;
+                        input.value = formData[key];
+                        form.appendChild(input);
+                    }
+                }
+                form.submit();
+            }
+        }
+
+        function showStatus(msg) {
+            var box = document.getElementById('statusBox');
+            box.style.display = 'block';
+            document.getElementById('statusText').innerText = msg;
+        }
+    </script>
 </body>
 </html>
