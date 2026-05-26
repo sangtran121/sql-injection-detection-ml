@@ -14,6 +14,10 @@ Hệ thống phát hiện và ngăn chặn tấn công SQL Injection theo thời
 
 **eParty** là website quản lý dịch vụ tiệc cưới được xây dựng bằng **C# ASP.NET MVC + Entity Framework**, với các chức năng: đăng ký tài khoản, đặt tiệc, quản lý menu, booking, thanh toán...
 
+> 🖼️ **Giao diện trang chủ eParty (PartyServ):**
+>
+> ![Homepage eParty](docs/images/01_homepage.png)
+
 Sau khi hoàn thiện website, nhóm phát hiện lỗ hổng **SQL Injection** nghiêm trọng và quyết định nâng cấp hệ thống bảo mật với 3 lớp phòng thủ:
 
 - **Lớp 1 — Rule-based Filter:** Chặn ngay các pattern SQLi rõ ràng (nhanh, không cần gọi API)
@@ -214,6 +218,10 @@ Kiểm tra trong SQL Server Management Studio — phải có 2 bảng mới:
 1. Nhắn tin `/newbot` cho [@BotFather](https://t.me/BotFather) trên Telegram
 2. Đặt tên bot, nhận **Bot Token**
 
+> 🖼️ **BotFather trả về Bot Token sau khi tạo bot thành công:**
+>
+> ![BotFather Token](docs/images/02_botfather.png)
+
 **5.2 Lấy Chat ID:**
 - Nhắn bất kỳ tin nhắn cho bot, rồi truy cập:
   ```
@@ -253,6 +261,10 @@ python app.py
 
 Giữ cửa sổ này **luôn mở**. Flask chạy tại `http://localhost:5000`.
 
+> 🖼️ **Flask API khởi động thành công và đang nhận request `/predict`:**
+>
+> ![Flask Running](docs/images/03_flask_running.png)
+
 ### 2️⃣ Khởi động Website ASP.NET
 
 Trong Visual Studio:
@@ -272,6 +284,10 @@ Sau đó đăng ký webhook (thay URL ngrok của bạn):
 ```
 https://api.telegram.org/bot<TOKEN>/setWebhook?url=https://YOUR_NGROK_URL/TelegramWebhook
 ```
+
+> 🖼️ **ngrok tunnel active và webhook Telegram được đăng ký thành công:**
+>
+> ![ngrok Webhook](docs/images/04_ngrok_webhook.png)
 
 > 💡 **Lưu ý:** ngrok free tier đổi URL mỗi lần restart. Phải đăng ký lại webhook sau mỗi lần bật ngrok.
 
@@ -322,6 +338,10 @@ Dán payload vào textarea và chọn chế độ:
 | **Only ML** | Kiểm tra thuần bằng XGBoost Model |
 | **Full Filter** | Giả lập filter thực tế (Rule-based + ML) |
 
+> 🖼️ **Trang test payload với chế độ Full Filter — 20 payloads đều bị chặn:**
+>
+> ![Test Page](docs/images/05_test_page.png)
+
 ### Các payload test mẫu
 
 ```sql
@@ -340,11 +360,31 @@ Tôi muốn đặt tiệc sinh nhật cho bé gái 8 tuổi, chủ đề công c
 Teambuilding công ty ABC vào ngày 20/05/2026 tại Quận 7
 ```
 
+### Trang 403 khi bị chặn
+
+Khi phát hiện SQLi, người dùng thấy trang thông báo bị chặn và có thể báo cáo false positive cho Admin:
+
+> 🖼️ **Trang 403 hiển thị khi request bị chặn:**
+>
+> ![Blocked Page](docs/images/06_blocked_page.png)
+
+### Telegram Alert & Admin Review
+
+Khi người dùng bấm **"Báo cáo Sai cho Admin"**, bot Telegram gửi alert kèm payload đầy đủ và 2 nút bấm:
+
+> 🖼️ **Alert Telegram gửi đến Admin với payload đầy đủ và nút Whitelist / Bỏ qua:**
+>
+> ![Telegram Alert](docs/images/07_telegram_alert.png)
+
 ### Xem Dashboard log
 
 Đăng nhập Admin → truy cập: `https://localhost:44350/SQLInjectionLog`
 
 Có thể lọc theo: **Tất cả / Rule-based / ML Model / Blocked**
+
+> 🖼️ **Dashboard log hiển thị toàn bộ các request bị chặn với IP, URL, payload và nguồn phát hiện:**
+>
+> ![Dashboard Log](docs/images/08_dashboard_log.png)
 
 ---
 
@@ -486,10 +526,19 @@ Whitelist lưu trong bộ nhớ (in-memory `List<string>`), được nạp khi A
 ## 📊 Kết quả Model
 
 | Metric | XGBoost | RandomForest |
-|--------|---------|--------------|
-| Accuracy (Test) | ~97% | ~95% |
+|--------|---------|--------------| 
+| Accuracy (Test) | **99.69%** | **99.43%** |
+| Precision (SQLi) | 99.96% | 100% |
+| Recall (SQLi) | 99.21% | 98.46% |
+| F1-score (SQLi) | 99.58% | 99.23% |
 | False Positive (Tiếng Việt) | Thấp (có whitelist) | Trung bình |
 | Tốc độ inference | ~5ms | ~8ms |
+
+> 🖼️ **Kết quả huấn luyện XGBoost & RandomForest và Super Stress Test (40+ cases):**
+>
+> ![Model Results](docs/images/9_model_results.png)
+
+*XGBoost được chọn là model chính do accuracy cao hơn (99.69% vs 99.43%) và train acc (99.94%) gần với test acc, chứng tỏ không bị overfit.*
 
 ---
 
