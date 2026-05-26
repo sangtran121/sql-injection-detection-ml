@@ -43,7 +43,6 @@ patterns = {
 for k, v in sorted(patterns.items(), key=lambda x: x[1], reverse=True):
     print(f"→ {k}: {v:,} queries")
 
-print("\n🔍 Lý do developer hay bỏ qua: Dynamic SQL, Stored Procedure, thiếu layer ML.")
 
 # ====================== Chuẩn bị dữ liệu ======================
 X = df['clean_query']
