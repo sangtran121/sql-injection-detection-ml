@@ -60,13 +60,16 @@ namespace eParty.Helpers
 
         public override void OnActionExecuting(ActionExecutingContext filterContext)
         {
-            string controller = (filterContext.RouteData.Values["controller"]?.ToString() ?? "").ToLower();
-            if (controller == "sqlinjectiontest")
+            string controller = (filterContext.RouteData.Values["controller"]?.ToString() ?? "").ToLowerInvariant();
+            string action = (filterContext.RouteData.Values["action"]?.ToString() ?? "").ToLowerInvariant();
+
+            // BYPASS FILTER - Cho phép ReportFalsePositive và Test
+            if ((controller == "sqlinjectionlog" && action == "reportfalsepositive") ||
+                controller == "sqlinjectiontest")
             {
                 base.OnActionExecuting(filterContext);
                 return;
             }
-
             string rawInput = GetAllInput(filterContext.HttpContext.Request);
 
             if (string.IsNullOrWhiteSpace(rawInput) || rawInput.Length < 5)
@@ -255,16 +258,13 @@ namespace eParty.Helpers
 
         private void HandleSuspiciousRequest(ActionExecutingContext filterContext)
         {
+            string suspiciousInput = GetAllInput(filterContext.HttpContext.Request);
+
             filterContext.HttpContext.Response.StatusCode = 403;
-            filterContext.Result = new JsonResult
+            filterContext.Result = new ViewResult
             {
-                Data = new
-                {
-                    success = false,
-                    message = "Yêu cầu bị chặn vì nghi ngờ SQL Injection!",
-                    code = "SQL_INJECTION_DETECTED"
-                },
-                JsonRequestBehavior = JsonRequestBehavior.AllowGet
+                ViewName = "~/Views/Shared/SQLInjectionBlocked.cshtml",
+                ViewData = new ViewDataDictionary { { "SuspiciousInput", suspiciousInput } }
             };
         }
         // ================== WHITELIST ĐỘNG (từ Dashboard) ==================

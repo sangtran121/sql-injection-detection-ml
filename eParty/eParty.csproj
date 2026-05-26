@@ -670,11 +670,12 @@
     <Compile Include="Controllers\NewsController.cs" />
     <Compile Include="Controllers\SQLInjectionLogController.cs" />
     <Compile Include="Controllers\SqlInjectionTestController.cs" />
+    <Compile Include="Controllers\TelegramWebhookController.cs" />
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
     <Compile Include="Helpers\SqlInjectionFilter.cs" />
-    <Compile Include="Middleware\SqlInjectionMiddleware.cs" />
+    <Compile Include="Helpers\TelegramHelper.cs" />
     <Compile Include="Migrations\202510281609517_InitialCreate.cs" />
     <Compile Include="Migrations\202510281609517_InitialCreate.Designer.cs">
       <DependentUpon>202510281609517_InitialCreate.cs</DependentUpon>
@@ -682,6 +683,10 @@
     <Compile Include="Migrations\202605051149019_AddSQLInjectionLog.cs" />
     <Compile Include="Migrations\202605051149019_AddSQLInjectionLog.Designer.cs">
       <DependentUpon>202605051149019_AddSQLInjectionLog.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\202605261351311_AddPendingWhitelist.cs" />
+    <Compile Include="Migrations\202605261351311_AddPendingWhitelist.Designer.cs">
+      <DependentUpon>202605261351311_AddPendingWhitelist.cs</DependentUpon>
     </Compile>
     <Compile Include="Migrations\Configuration.cs" />
     <Compile Include="Models\AccountViewModels.cs" />
@@ -705,6 +710,7 @@
     <Compile Include="Models\NewsViewModel.cs" />
     <Compile Include="Models\Partner.cs" />
     <Compile Include="Models\Party.cs" />
+    <Compile Include="Models\PendingWhitelist.cs" />
     <Compile Include="Models\Poster.cs" />
     <Compile Include="Models\PriceHistory.cs" />
     <Compile Include="Models\Provider.cs" />
@@ -2216,6 +2222,7 @@
     <Content Include="Views\News\Details.cshtml" />
     <Content Include="Views\SQLInjectionLog\Index.cshtml" />
     <Content Include="Views\SqlInjectionTest\Index.cshtml" />
+    <Content Include="Views\Shared\SQLInjectionBlocked.cshtml" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="App_Data\" />
@@ -2223,6 +2230,7 @@
     <Folder Include="Areas\Staff\Data\" />
     <Folder Include="Data\" />
     <Folder Include="Views\Login\" />
+    <Folder Include="Views\TelegramWebhook\" />
     <Folder Include="wwwroot\models\" />
   </ItemGroup>
   <ItemGroup>
@@ -2262,6 +2270,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Migrations\202605051149019_AddSQLInjectionLog.resx">
       <DependentUpon>202605051149019_AddSQLInjectionLog.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\202605261351311_AddPendingWhitelist.resx">
+      <DependentUpon>202605261351311_AddPendingWhitelist.cs</DependentUpon>
     </EmbeddedResource>
   </ItemGroup>
   <PropertyGroup>

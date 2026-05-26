@@ -1,0 +1,136 @@
+﻿@{
+    ViewBag.Title = "Yêu cầu bị chặn";
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bảo mật - Yêu cầu bị chặn</title>
+
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', system-ui, sans-serif;
+            background: linear-gradient(135deg, #1e3a8a, #3b82f6);
+            color: white;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container {
+            text-align: center;
+            max-width: 620px;
+            padding: 40px 30px;
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(12px);
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.2);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        }
+
+        .icon {
+            font-size: 92px;
+            margin-bottom: 20px;
+            animation: shieldPulse 2s infinite;
+        }
+
+        @@keyframes shieldPulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.08);
+            }
+        }
+
+        h1 {
+            font-size: 2.4rem;
+            margin: 0 0 12px 0;
+            font-weight: 600;
+        }
+
+        p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            line-height: 1.6;
+            margin-bottom: 30px;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 14px 32px;
+            margin: 8px;
+            border-radius: 50px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: white;
+            color: #1e40af;
+        }
+
+            .btn-primary:hover {
+                transform: translateY(-3px);
+                box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+            }
+
+        .btn-secondary {
+            background: transparent;
+            color: white;
+            border: 2px solid rgba(255,255,255,0.6);
+        }
+
+            .btn-secondary:hover {
+                background: rgba(255,255,255,0.1);
+            }
+
+        .btn-warning {
+            background: #f59e0b;
+            color: white;
+        }
+
+            .btn-warning:hover {
+                background: #d97706;
+            }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="icon">🛡️</div>
+        <h1>Yêu cầu của bạn đã bị chặn</h1>
+        <p>
+            Hệ thống bảo mật đã phát hiện hành vi đáng ngờ (SQL Injection).<br>
+            Để bảo vệ dữ liệu, yêu cầu này đã bị từ chối.
+        </p>
+
+        <div>
+            <a href="javascript:history.back()" class="btn btn-primary">
+                <i class="fas fa-arrow-left"></i> Quay lại
+            </a>
+            <a href="/" class="btn btn-secondary">
+                <i class="fas fa-home"></i> Về Trang chủ
+            </a>
+            <a href="/SQLInjectionLog/ReportFalsePositive?payload=@(ViewData["SuspiciousInput"] != null ? HttpUtility.UrlEncode(ViewData["SuspiciousInput"].ToString()) : "")"
+               class="btn btn-warning">
+                <i class="fas fa-flag"></i> Báo cáo Sai cho Admin
+            </a>
+        </div>
+
+        <div class="footer" style="margin-top:40px; font-size:0.9rem; opacity:0.7;">
+            Powered by <strong>eParty Security</strong>
+        </div>
+    </div>
+</body>
+</html>

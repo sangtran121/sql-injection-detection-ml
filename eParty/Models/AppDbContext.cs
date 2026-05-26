@@ -32,6 +32,7 @@ namespace eParty.Models
         public DbSet<Comment> Comments { get; set; }
         public DbSet<Poster> Posters { get; set; }
         public DbSet<Partner> Partners { get; set; }
+        public DbSet<PendingWhitelist> PendingWhitelists { get; set; }
 
         public DbSet<SQLInjectionLog> SQLInjectionLogs { get; set; }
 

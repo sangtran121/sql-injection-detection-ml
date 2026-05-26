@@ -84,18 +84,39 @@
                         </button>
                     }
                     &nbsp;
-                    @using (Html.BeginForm("AddToWhitelist", "SQLInjectionLog", new { id = log.Id }, FormMethod.Post, new { @class = "inline-form" }))
-                    {
-                        @Html.AntiForgeryToken()
-                        <button type="submit" class="btn btn-success btn-xs"
-                                onclick="return confirm('Cho phép payload này vĩnh viễn (bỏ qua Rule và ML)?');">
-                            ✅ Cho phép
-                        </button>
-                    }
+                    <button type="button" class="btn btn-info btn-xs"
+                            onclick="showDetail('@(log.SuspiciousInput.Replace("'", "\\'").Replace("\r", "\\r").Replace("\n", "\\n"))')">
+                        👁 Chi tiết
+                    </button>
                 </td>
             </tr>
         }
     </tbody>
 </table>
 
+<!-- Modal xem chi tiết log -->
+<div class="modal fade" id="detailModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title">Chi tiết Payload</h4>
+            </div>
+            <div class="modal-body">
+                <pre id="fullPayload" style="background:#f8f8f8; padding:15px; font-family:Consolas; white-space:pre-wrap; max-height:400px; overflow:auto;"></pre>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <p><a href="@Url.Action("Index", "Home")" class="btn btn-primary">← Quay lại Trang chủ</a></p>
+
+<script>
+    function showDetail(payload) {
+        document.getElementById('fullPayload').textContent = payload;
+        $('#detailModal').modal('show');
+    }
+</script>
