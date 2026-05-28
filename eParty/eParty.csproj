@@ -692,6 +692,10 @@
     <Compile Include="Migrations\202605261854273_AddReturnUrl.Designer.cs">
       <DependentUpon>202605261854273_AddReturnUrl.cs</DependentUpon>
     </Compile>
+    <Compile Include="Migrations\202605281906051_AddTelegramMessageId.cs" />
+    <Compile Include="Migrations\202605281906051_AddTelegramMessageId.Designer.cs">
+      <DependentUpon>202605281906051_AddTelegramMessageId.cs</DependentUpon>
+    </Compile>
     <Compile Include="Migrations\Configuration.cs" />
     <Compile Include="Models\AccountViewModels.cs" />
     <Compile Include="Models\AppDbContext.cs" />
@@ -2280,6 +2284,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Migrations\202605261854273_AddReturnUrl.resx">
       <DependentUpon>202605261854273_AddReturnUrl.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\202605281906051_AddTelegramMessageId.resx">
+      <DependentUpon>202605281906051_AddTelegramMessageId.cs</DependentUpon>
     </EmbeddedResource>
   </ItemGroup>
   <PropertyGroup>

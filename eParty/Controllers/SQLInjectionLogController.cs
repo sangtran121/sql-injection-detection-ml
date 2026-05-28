@@ -108,25 +108,41 @@ namespace eParty.Controllers
             return RedirectToAction("Index");
         }
         // Nhận token từ View, gửi Telegram
-       
+
         [HttpGet]
         [AllowAnonymous]
         public async Task<ActionResult> ReportFalsePositive(string token)
         {
             if (string.IsNullOrEmpty(token))
-                return Json(new { success = false }, JsonRequestBehavior.AllowGet);
+                return Json(new { success = false, reason = "no_token" }, JsonRequestBehavior.AllowGet);
+
+            string ip = HttpContext.Request.UserHostAddress ?? "Unknown";
+
+            // ================== RATE LIMIT ==================
+            if (TelegramHelper.IsRateLimited(ip))
+            {
+                return Json(new { success = false, reason = "rate_limited" }, JsonRequestBehavior.AllowGet);
+            }
 
             using (var db = new AppDbContext())
             {
                 var pending = db.PendingWhitelists.FirstOrDefault(p => p.Token == token && !p.IsUsed);
                 if (pending == null)
-                    return Json(new { success = false }, JsonRequestBehavior.AllowGet);
+                    return Json(new { success = false, reason = "not_found" }, JsonRequestBehavior.AllowGet);
 
-                string ip = HttpContext.Request.UserHostAddress ?? "Unknown";
                 string time = DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss");
-                bool sent = await TelegramHelper.SendAlert(pending.Payload, ip, time, token);
 
-                return Json(new { success = sent }, JsonRequestBehavior.AllowGet);
+                // SendAlert giờ trả về messageId
+                long messageId = await TelegramHelper.SendAlert(pending.Payload, ip, time, token);
+
+                if (messageId > 0)
+                {
+                    // Lưu messageId vào DB để sau này edit/xóa
+                    pending.TelegramMessageId = messageId;
+                    db.SaveChanges();
+                }
+
+                return Json(new { success = messageId > 0 }, JsonRequestBehavior.AllowGet);
             }
         }
 

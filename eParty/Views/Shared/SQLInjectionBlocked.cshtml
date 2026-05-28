@@ -184,11 +184,19 @@
 
             fetch('/SQLInjectionLog/ReportFalsePositive?token=' + token)
                 .then(function(r) { return r.json(); })
-                .then(function(data) {
+                .then(function (data) {
                     if (data.success) {
                         showStatus('✅ Đã gửi! Đang chờ Admin phê duyệt...');
                         startPolling();
+                    } else if (data.reason === 'rate_limited') {
+                        // ← thêm case này
+                        spinner.style.display = 'none';
+                        showStatus('⏳ Bạn vừa gửi báo cáo rồi. Vui lòng chờ 1 phút trước khi gửi lại.');
+                        btn.disabled = false;
+                        btn.innerHTML = '<i class="fas fa-flag"></i> Báo cáo Sai cho Admin';
+                        reported = false;
                     } else {
+                        spinner.style.display = 'none';
                         showStatus('❌ Gửi thất bại. Vui lòng thử lại.');
                         btn.disabled = false;
                         btn.innerHTML = '<i class="fas fa-flag"></i> Báo cáo Sai cho Admin';

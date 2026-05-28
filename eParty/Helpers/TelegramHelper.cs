@@ -1,6 +1,7 @@
 ﻿using eParty.Models;
 using Newtonsoft.Json;
 using System;
+using System.Collections.Concurrent;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
@@ -12,7 +13,23 @@ namespace eParty.Helpers
         private static readonly string BotToken = "8859783946:AAGToRsMaTgWvbHKbmyYnY6IzyxU-zO6ogU";
         private static readonly string ChatId = "6343263182";
 
-        public static async Task<bool> SendAlert(string payload, string ip, string time, string token)
+        // ================== RATE LIMIT: 1 IP chỉ gửi 1 lần/phút ==================
+        private static readonly ConcurrentDictionary<string, DateTime> _lastSentByIp
+            = new ConcurrentDictionary<string, DateTime>();
+
+        public static bool IsRateLimited(string ip)
+        {
+            if (_lastSentByIp.TryGetValue(ip, out DateTime lastSent))
+            {
+                if ((DateTime.Now - lastSent).TotalSeconds < 60)
+                    return true; // vẫn trong cooldown 60 giây
+            }
+            _lastSentByIp[ip] = DateTime.Now;
+            return false;
+        }
+
+        // ================== GỬI ALERT + TRẢ VỀ MESSAGE ID ==================
+        public static async Task<long> SendAlert(string payload, string ip, string time, string token)
         {
             try
             {
@@ -34,11 +51,11 @@ namespace eParty.Helpers
                     {
                         inline_keyboard = new object[][]
                         {
-                    new object[]
-                    {
-                        new { text = "✅ Whitelist payload này", callback_data = $"whitelist:{token}" },
-                        new { text = "❌ Bỏ qua",               callback_data = $"ignore:{token}"   }
-                    }
+                            new object[]
+                            {
+                                new { text = "✅ Whitelist payload này", callback_data = $"whitelist:{token}" },
+                                new { text = "❌ Bỏ qua",               callback_data = $"ignore:{token}"   }
+                            }
                         }
                     }
                 };
@@ -54,27 +71,48 @@ namespace eParty.Helpers
                     var response = await client.PostAsync(url, content);
                     string respBody = await response.Content.ReadAsStringAsync();
                     System.Diagnostics.Debug.WriteLine("[Telegram] " + respBody);
-                    return response.IsSuccessStatusCode;
+
+                    if (response.IsSuccessStatusCode)
+                    {
+                        // Trích message_id từ response để lưu lại
+                        dynamic parsed = JsonConvert.DeserializeObject(respBody);
+                        long messageId = parsed?.result?.message_id ?? 0;
+                        return messageId;
+                    }
                 }
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine("[Telegram ERROR] " + ex.Message);
-                return false;
             }
+
+            return 0;
         }
 
-        // Trả lời callback để nút không bị loading mãi
-        public static void AnswerCallback(string callbackQueryId, string text)
+        // ================== SỬA TIN NHẮN KHI WHITELIST ==================
+        public static void EditMessageWhitelisted(long messageId, string ip)
         {
             try
             {
+                string newText = $"✅ *Đã WHITELIST thành công!*\n\n" +
+                                 $"🌐 *IP báo cáo:* `{ip}`\n" +
+                                 $"🕐 *Duyệt lúc:* {DateTime.Now:dd/MM/yyyy HH:mm:ss}\n\n" +
+                                 $"_Payload này đã được thêm vào whitelist._";
+
+                var bodyObj = new
+                {
+                    chat_id = ChatId,
+                    message_id = messageId,
+                    text = newText,
+                    parse_mode = "Markdown"
+                    // Không có reply_markup → nút bị xóa tự động
+                };
+
                 using (var client = new HttpClient())
                 {
-                    string url = $"https://api.telegram.org/bot{BotToken}/answerCallbackQuery";
-                    var body = new { callback_query_id = callbackQueryId, text = text };
+                    string url = $"https://api.telegram.org/bot{BotToken}/editMessageText";
                     var content = new StringContent(
-                        JsonConvert.SerializeObject(body),
+                        JsonConvert.SerializeObject(bodyObj),
                         Encoding.UTF8,
                         "application/json");
                     client.PostAsync(url, content).Wait();
@@ -83,21 +121,47 @@ namespace eParty.Helpers
             catch { }
         }
 
-        private static string SavePendingWhitelist(string payload)
+        // ================== XÓA TIN NHẮN KHI BỎ QUA ==================
+        public static void DeleteMessage(long messageId)
         {
-            string token = Guid.NewGuid().ToString("N").Substring(0, 12);
-            using (var db = new AppDbContext())
+            try
             {
-                db.PendingWhitelists.Add(new PendingWhitelist
+                var bodyObj = new
                 {
-                    Payload = payload,
-                    Token = token,
-                    CreatedAt = DateTime.Now,
-                    IsUsed = false
-                });
-                db.SaveChanges();
+                    chat_id = ChatId,
+                    message_id = messageId
+                };
+
+                using (var client = new HttpClient())
+                {
+                    string url = $"https://api.telegram.org/bot{BotToken}/deleteMessage";
+                    var content = new StringContent(
+                        JsonConvert.SerializeObject(bodyObj),
+                        Encoding.UTF8,
+                        "application/json");
+                    client.PostAsync(url, content).Wait();
+                }
             }
-            return token;
+            catch { }
+        }
+
+        // ================== TRẢ LỜI CALLBACK ==================
+        public static void AnswerCallback(string callbackQueryId, string text)
+        {
+            try
+            {
+                using (var client = new HttpClient())
+                {
+                    string url = $"https://api.telegram.org/bot{BotToken}/answerCallbackQuery";
+                    var body = new { callback_query_id = callbackQueryId, text = text, show_alert = false };
+                    var content = new StringContent(
+                        JsonConvert.SerializeObject(body),
+                        Encoding.UTF8,
+                        "application/json");
+                    client.PostAsync(url, content).Wait();
+                }
+            }
+            catch { }
         }
     }
 }
