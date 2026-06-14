@@ -7,13 +7,13 @@ namespace eParty.Migrations
     using System.Resources;
     
     [GeneratedCode("EntityFramework.Migrations", "6.4.4")]
-    public sealed partial class AddSQLInjectionLogEnhancement : IMigrationMetadata
+    public sealed partial class AddApiGatewayLogs : IMigrationMetadata
     {
-        private readonly ResourceManager Resources = new ResourceManager(typeof(AddSQLInjectionLogEnhancement));
+        private readonly ResourceManager Resources = new ResourceManager(typeof(AddApiGatewayLogs));
         
         string IMigrationMetadata.Id
         {
-            get { return "202605171906236_AddSQLInjectionLogEnhancement"; }
+            get { return "202606140553098_AddApiGatewayLogs"; }
         }
         
         string IMigrationMetadata.Source

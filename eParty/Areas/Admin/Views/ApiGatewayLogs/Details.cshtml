@@ -1,0 +1,169 @@
+﻿@model eParty.Models.ApiGatewayLog
+
+@{
+    ViewBag.Title = "API Gateway Log Details";
+    Layout = "~/Areas/Admin/Views/Shared/_LayoutAdmin.cshtml";
+}
+
+<div class="page-header">
+    <h3 class="fw-bold mb-3">API Gateway Log Details</h3>
+    <ul class="breadcrumbs mb-3">
+        <li class="nav-home">
+            <a href="/Admin/Dashboard">
+                <i class="icon-home"></i>
+            </a>
+        </li>
+        <li class="separator">
+            <i class="icon-arrow-right"></i>
+        </li>
+        <li class="nav-item">
+            <a href="/Admin/ApiGatewayLogs">API Gateway Logs</a>
+        </li>
+        <li class="separator">
+            <i class="icon-arrow-right"></i>
+        </li>
+        <li class="nav-item">
+            <a href="#">Details</a>
+        </li>
+    </ul>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <div class="card-title">Log #@Model.Id</div>
+    </div>
+
+    <div class="card-body">
+        <h4>Request Information</h4>
+        <table class="table table-bordered">
+            <tr>
+                <th style="width: 250px;">IP Address</th>
+                <td>@Model.IpAddress</td>
+            </tr>
+            <tr>
+                <th>Session Id</th>
+                <td>@Model.SessionId</td>
+            </tr>
+            <tr>
+                <th>Username</th>
+                <td>@Model.Username</td>
+            </tr>
+            <tr>
+                <th>Controller</th>
+                <td>@Model.Controller</td>
+            </tr>
+            <tr>
+                <th>Action</th>
+                <td>@Model.ActionName</td>
+            </tr>
+            <tr>
+                <th>Raw Url</th>
+                <td>@Model.RawUrl</td>
+            </tr>
+            <tr>
+                <th>HTTP Method</th>
+                <td>@Model.HttpMethod</td>
+            </tr>
+            <tr>
+                <th>User Agent</th>
+                <td>@Model.UserAgent</td>
+            </tr>
+            <tr>
+                <th>Created At</th>
+                <td>@Model.CreatedAt.ToString("dd/MM/yyyy HH:mm:ss")</td>
+            </tr>
+        </table>
+
+        <h4 class="mt-4">ML Decision</h4>
+        <table class="table table-bordered">
+            <tr>
+                <th style="width: 250px;">Is Abnormal</th>
+                <td>@Model.IsAbnormal</td>
+            </tr>
+            <tr>
+                <th>Risk Score</th>
+                <td>@Model.RiskScore.ToString("0.0000")</td>
+            </tr>
+            <tr>
+                <th>Attack Score</th>
+                <td>@Model.AttackScore.ToString("0.0000")</td>
+            </tr>
+            <tr>
+                <th>Predicted Label</th>
+                <td>@Model.PredictedLabel</td>
+            </tr>
+            <tr>
+                <th>Rule Attack</th>
+                <td>@Model.RuleAttack</td>
+            </tr>
+            <tr>
+                <th>Final Action</th>
+                <td>@Model.FinalAction</td>
+            </tr>
+            <tr>
+                <th>Decision Source</th>
+                <td>@Model.DecisionSource</td>
+            </tr>
+        </table>
+
+        <h4 class="mt-4">Realtime Features</h4>
+        <table class="table table-bordered">
+            <tr>
+                <th style="width: 250px;">Inter API Access Duration</th>
+                <td>@Model.InterApiAccessDuration.ToString("0.####")</td>
+            </tr>
+            <tr>
+                <th>API Access Uniqueness</th>
+                <td>@Model.ApiAccessUniqueness.ToString("0.####")</td>
+            </tr>
+            <tr>
+                <th>Sequence Length</th>
+                <td>@Model.SequenceLength.ToString("0.##")</td>
+            </tr>
+            <tr>
+                <th>VSession Duration</th>
+                <td>@Model.VsessionDuration.ToString("0.####")</td>
+            </tr>
+            <tr>
+                <th>Num Sessions</th>
+                <td>@Model.NumSessions.ToString("0.##")</td>
+            </tr>
+            <tr>
+                <th>Num Users</th>
+                <td>@Model.NumUsers.ToString("0.##")</td>
+            </tr>
+            <tr>
+                <th>Num Unique APIs</th>
+                <td>@Model.NumUniqueApis.ToString("0.##")</td>
+            </tr>
+            <tr>
+                <th>Request Rate Per Min</th>
+                <td>@Model.RequestRatePerMin.ToString("0.##")</td>
+            </tr>
+            <tr>
+                <th>Graph Num Nodes</th>
+                <td>@Model.GraphNumNodes.ToString("0.##")</td>
+            </tr>
+            <tr>
+                <th>Graph Num Edges</th>
+                <td>@Model.GraphNumEdges.ToString("0.##")</td>
+            </tr>
+            <tr>
+                <th>Graph Density</th>
+                <td>@Model.GraphDensity.ToString("0.####")</td>
+            </tr>
+            <tr>
+                <th>Graph Self Loops</th>
+                <td>@Model.GraphSelfLoops.ToString("0.##")</td>
+            </tr>
+            <tr>
+                <th>Graph Avg Degree</th>
+                <td>@Model.GraphAvgDegree.ToString("0.####")</td>
+            </tr>
+        </table>
+
+        <a href="/Admin/ApiGatewayLogs" class="btn btn-secondary">
+            Back to Logs
+        </a>
+    </div>
+</div>

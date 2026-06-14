@@ -7,13 +7,13 @@ namespace eParty.Migrations
     using System.Resources;
     
     [GeneratedCode("EntityFramework.Migrations", "6.4.4")]
-    public sealed partial class seed : IMigrationMetadata
+    public sealed partial class resethard : IMigrationMetadata
     {
-        private readonly ResourceManager Resources = new ResourceManager(typeof(seed));
+        private readonly ResourceManager Resources = new ResourceManager(typeof(resethard));
         
         string IMigrationMetadata.Id
         {
-            get { return "202510290045549_seed"; }
+            get { return "202606140216215_resethard"; }
         }
         
         string IMigrationMetadata.Source

@@ -1,0 +1,358 @@
+﻿using eParty.Models;
+using eParty.Service;
+using System;
+using System.Web.Mvc;
+
+namespace eParty.Helpers
+{
+    /// <summary>
+    /// Global MVC Filter cho API Gateway ML.
+    ///
+    /// Nhiệm vụ:
+    /// - Chạy trước mỗi Action MVC
+    /// - Gọi ApiGatewaySecurityService để tính feature + gọi Flask ML
+    /// - Xử lý action Flask trả về:
+    ///     allow                  -> cho qua
+    ///     monitor                -> cho qua nhưng ghi log debug
+    ///     challenge_or_rate_limit -> trả HTTP 429
+    ///     block                  -> trả HTTP 403
+    ///
+    /// Lưu ý:
+    /// - File này KHÔNG tự train model
+    /// - File này KHÔNG tính feature trực tiếp
+    /// - Feature nằm trong ApiGatewaySecurityService
+    /// </summary>
+    public class ApiGatewayMlFilter : ActionFilterAttribute
+    {
+        private static readonly ApiGatewaySecurityService _securityService =
+            new ApiGatewaySecurityService();
+
+        public override void OnActionExecuting(ActionExecutingContext filterContext)
+        {
+            if (filterContext == null)
+            {
+                return;
+            }
+
+            try
+            {
+                if (ShouldSkip(filterContext))
+                {
+                    base.OnActionExecuting(filterContext);
+                    return;
+                }
+
+                ApiGatewayMlResult result = _securityService
+                    .EvaluateAsync(filterContext.HttpContext)
+                    .GetAwaiter()
+                    .GetResult();
+
+                if (result == null)
+                {
+                    base.OnActionExecuting(filterContext);
+                    return;
+                }
+
+                WriteDebugLog(filterContext, result);
+
+                string action = (result.Action ?? "allow").ToLowerInvariant();
+
+                switch (action)
+                {
+                    case "allow":
+                        base.OnActionExecuting(filterContext);
+                        return;
+
+                    case "monitor":
+                        // Monitor nghĩa là ghi nhận bất thường nhưng vẫn cho request đi tiếp.
+                        base.OnActionExecuting(filterContext);
+                        return;
+
+                    case "challenge_or_rate_limit":
+                        HandleChallengeOrRateLimit(filterContext, result);
+                        return;
+
+                    case "block":
+                        HandleBlock(filterContext, result);
+                        return;
+
+                    default:
+                        // Nếu Flask trả action lạ thì an toàn cho website: cho qua.
+                        System.Diagnostics.Debug.WriteLine(
+                            "[API Gateway Filter] Unknown action: " + action
+                        );
+
+                        base.OnActionExecuting(filterContext);
+                        return;
+                }
+            }
+            catch (Exception ex)
+            {
+                // Tuyệt đối không để filter làm sập website.
+                System.Diagnostics.Debug.WriteLine(
+                    "[API Gateway Filter] Exception: " + ex.Message
+                );
+
+                base.OnActionExecuting(filterContext);
+            }
+        }
+
+        /// <summary>
+        /// Bỏ qua các request không cần kiểm tra.
+        /// </summary>
+        private bool ShouldSkip(ActionExecutingContext filterContext)
+        {
+            try
+            {
+                if (filterContext.IsChildAction)
+                {
+                    return true;
+                }
+
+                string controller = GetRouteValue(filterContext, "controller");
+                string action = GetRouteValue(filterContext, "action");
+
+                if (string.IsNullOrWhiteSpace(controller))
+                {
+                    return true;
+                }
+
+                controller = controller.ToLowerInvariant();
+                action = action.ToLowerInvariant();
+
+                // Không kiểm tra trang lỗi để tránh vòng lặp lỗi.
+                if (controller == "error")
+                {
+                    return true;
+                }
+
+                // Nếu sau này có controller log riêng thì nên bỏ qua để admin còn xem log.
+                if (
+                    controller == "apigatewaylogs" ||
+                    controller == "blockedips"
+                )
+                {
+                    return true;
+                }
+
+                return false;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Xử lý challenge/rate-limit.
+        /// Trả HTTP 429.
+        /// </summary>
+        private void HandleChallengeOrRateLimit(
+            ActionExecutingContext filterContext,
+            ApiGatewayMlResult result
+        )
+        {
+            var response = filterContext.HttpContext.Response;
+
+            response.StatusCode = 429;
+            response.TrySkipIisCustomErrors = true;
+
+            string message =
+                "Yêu cầu của bạn đang được giới hạn tạm thời bởi API Gateway Security. " +
+                "Vui lòng thử lại sau vài giây.";
+
+            if (IsAjaxRequest(filterContext))
+            {
+                filterContext.Result = new JsonResult
+                {
+                    JsonRequestBehavior = JsonRequestBehavior.AllowGet,
+                    Data = new
+                    {
+                        success = false,
+                        blocked = false,
+                        action = "challenge_or_rate_limit",
+                        message = message,
+                        risk_score = Math.Round(result.RiskScore, 4),
+                        predicted_label = result.PredictedLabel,
+                        decision_source = result.DecisionSource
+                    }
+                };
+
+                return;
+            }
+
+            filterContext.Result = new ContentResult
+            {
+                ContentType = "text/plain",
+                Content =
+                    "429 Too Many Requests\n\n" +
+                    message + "\n\n" +
+                    "Risk score: " + Math.Round(result.RiskScore, 4) + "\n" +
+                    "Predicted label: " + result.PredictedLabel + "\n" +
+                    "Decision source: " + result.DecisionSource
+            };
+        }
+
+        /// <summary>
+        /// Xử lý block cứng.
+        /// Trả HTTP 403.
+        /// </summary>
+        private void HandleBlock(
+            ActionExecutingContext filterContext,
+            ApiGatewayMlResult result
+        )
+        {
+            var response = filterContext.HttpContext.Response;
+
+            response.StatusCode = 403;
+            response.TrySkipIisCustomErrors = true;
+
+            string message =
+                "Yêu cầu đã bị chặn bởi API Gateway Security vì có dấu hiệu tấn công.";
+
+            if (IsAjaxRequest(filterContext))
+            {
+                filterContext.Result = new JsonResult
+                {
+                    JsonRequestBehavior = JsonRequestBehavior.AllowGet,
+                    Data = new
+                    {
+                        success = false,
+                        blocked = true,
+                        action = "block",
+                        message = message,
+                        risk_score = Math.Round(result.RiskScore, 4),
+                        predicted_label = result.PredictedLabel,
+                        decision_source = result.DecisionSource
+                    }
+                };
+
+                return;
+            }
+
+            filterContext.Result = new ContentResult
+            {
+                ContentType = "text/plain",
+                Content =
+                    "403 Forbidden\n\n" +
+                    message + "\n\n" +
+                    "Risk score: " + Math.Round(result.RiskScore, 4) + "\n" +
+                    "Predicted label: " + result.PredictedLabel + "\n" +
+                    "Decision source: " + result.DecisionSource
+            };
+        }
+
+        /// <summary>
+        /// Ghi log debug ra Output window của Visual Studio.
+        /// </summary>
+        private void WriteDebugLog(
+            ActionExecutingContext filterContext,
+            ApiGatewayMlResult result
+        )
+        {
+            try
+            {
+                string controller = GetRouteValue(filterContext, "controller");
+                string actionName = GetRouteValue(filterContext, "action");
+                string ip = GetClientIp(filterContext);
+
+                string emoji = "✅";
+
+                if (result.Action == "monitor")
+                {
+                    emoji = "👁️";
+                }
+                else if (result.Action == "challenge_or_rate_limit")
+                {
+                    emoji = "⚠️";
+                }
+                else if (result.Action == "block")
+                {
+                    emoji = "🚫";
+                }
+
+                System.Diagnostics.Debug.WriteLine(
+                    string.Format(
+                        "[API Gateway Filter] {0} {1}/{2} IP={3} Label={4} Risk={5:F4} Action={6} Source={7}",
+                        emoji,
+                        controller,
+                        actionName,
+                        ip,
+                        result.PredictedLabel,
+                        result.RiskScore,
+                        result.Action,
+                        result.DecisionSource
+                    )
+                );
+            }
+            catch
+            {
+                // ignored
+            }
+        }
+
+        private bool IsAjaxRequest(ActionExecutingContext filterContext)
+        {
+            try
+            {
+                return filterContext.HttpContext.Request.IsAjaxRequest();
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private string GetRouteValue(ActionExecutingContext filterContext, string key)
+        {
+            try
+            {
+                object value = filterContext.RouteData.Values[key];
+
+                if (value == null)
+                {
+                    return "";
+                }
+
+                return Convert.ToString(value);
+            }
+            catch
+            {
+                return "";
+            }
+        }
+
+        private string GetClientIp(ActionExecutingContext filterContext)
+        {
+            try
+            {
+                string forwarded = filterContext.HttpContext.Request.ServerVariables["HTTP_X_FORWARDED_FOR"];
+
+                if (!string.IsNullOrWhiteSpace(forwarded))
+                {
+                    return forwarded.Split(',')[0].Trim();
+                }
+
+                string realIp = filterContext.HttpContext.Request.ServerVariables["HTTP_X_REAL_IP"];
+
+                if (!string.IsNullOrWhiteSpace(realIp))
+                {
+                    return realIp.Trim();
+                }
+
+                string userHostAddress = filterContext.HttpContext.Request.UserHostAddress;
+
+                if (!string.IsNullOrWhiteSpace(userHostAddress))
+                {
+                    return userHostAddress.Trim();
+                }
+            }
+            catch
+            {
+                // ignored
+            }
+
+            return "unknown";
+        }
+    }
+}

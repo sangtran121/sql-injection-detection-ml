@@ -7,17 +7,27 @@ packages/
 *.suo
 *.pdb
 
-# ================== Machine Learning Models (quan trọng) ==================
+# ================== Machine Learning Models ==================
 *.pkl
 *.pickle
 **/models/*.pkl
 **/wwwroot/models/*.pkl
 sql_injection_ml/models/
 eParty/wwwroot/models/
+api_gateway_ml/models/
+
+# ================== Machine Learning Data ==================
+api_gateway_ml/data/
+*.csv
+
+# Nếu muốn giữ CSV nhỏ trong project thì xóa dòng *.csv ở trên
+# và chỉ giữ api_gateway_ml/data/
 
 # ================== Database ==================
 App_Data/*.mdf
 App_Data/*.ldf
+*.mdf
+*.ldf
 
 # ================== Python ==================
 __pycache__/
@@ -33,6 +43,6 @@ logs/
 temp/
 tmp/
 
-# ================== Other ==================
+# ================== OS files ==================
 *.DS_Store
 Thumbs.db

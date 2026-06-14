@@ -10,6 +10,7 @@ namespace eParty
         {
             filters.Add(new HandleErrorAttribute());
             filters.Add(new SqlInjectionFilter());
+            filters.Add(new ApiGatewayMlFilter());
         }
     }
 }

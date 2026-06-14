@@ -35,6 +35,7 @@ namespace eParty.Models
         public DbSet<PendingWhitelist> PendingWhitelists { get; set; }
 
         public DbSet<SQLInjectionLog> SQLInjectionLogs { get; set; }
+        public DbSet<ApiGatewayLog> ApiGatewayLogs { get; set; }
 
         protected override void OnModelCreating(DbModelBuilder mb)
         {
