@@ -1,0 +1,137 @@
+﻿@model IEnumerable<eParty.Models.BlockedIp>
+
+@{
+    ViewBag.Title = "Blocked IPs";
+    Layout = "~/Areas/Admin/Views/Shared/_LayoutAdmin.cshtml";
+
+    bool showAll = ViewBag.ShowAll != null && (bool)ViewBag.ShowAll;
+}
+
+<div class="page-header">
+    <h3 class="fw-bold mb-3">Temporary Blocked IPs</h3>
+
+    <ul class="breadcrumbs mb-3">
+        <li class="nav-home">
+            <a href="/Admin/Dashboard">
+                <i class="icon-home"></i>
+            </a>
+        </li>
+        <li class="separator">
+            <i class="icon-arrow-right"></i>
+        </li>
+        <li class="nav-item">
+            <a href="#">Security</a>
+        </li>
+        <li class="separator">
+            <i class="icon-arrow-right"></i>
+        </li>
+        <li class="nav-item">
+            <a href="#">Blocked IPs</a>
+        </li>
+    </ul>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <div class="card-title">Blocked IP List</div>
+
+        <div>
+            @if (showAll)
+            {
+                <a href="/Admin/BlockedIps" class="btn btn-primary btn-sm">
+                    Show Active Only
+                </a>
+            }
+            else
+            {
+                <a href="/Admin/BlockedIps?showAll=true" class="btn btn-secondary btn-sm">
+                    Show All
+                </a>
+            }
+
+            @using (Html.BeginForm("DeleteExpired", "BlockedIps", FormMethod.Post, new { area = "Admin", style = "display:inline;" }))
+            {
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-danger btn-sm"
+                        onclick="return confirm('Xóa các IP block đã hết hạn?');">
+                    Delete Expired
+                </button>
+            }
+        </div>
+    </div>
+
+    <div class="card-body">
+        @if (Model == null || !Model.Any())
+        {
+            <div class="alert alert-info">
+                Hiện chưa có IP nào bị khóa.
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>Id</th>
+                            <th>IP Address</th>
+                            <th>Status</th>
+                            <th>Source</th>
+                            <th>Challenge Count</th>
+                            <th>Blocked Requests</th>
+                            <th>Created At</th>
+                            <th>Blocked Until</th>
+                            <th>Reason</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            bool active = item.IsActive && item.BlockedUntil > DateTime.Now;
+
+                            <tr>
+                                <td>@item.Id</td>
+                                <td>
+                                    <strong>@item.IpAddress</strong>
+                                </td>
+                                <td>
+                                    @if (active)
+                                    {
+                                        <span class="badge badge-danger">Active</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge badge-secondary">Expired</span>
+                                    }
+                                </td>
+                                <td>@item.Source</td>
+                                <td>@item.ChallengeCount</td>
+                                <td>@item.BlockedRequestCount</td>
+                                <td>@item.CreatedAt.ToString("dd/MM/yyyy HH:mm:ss")</td>
+                                <td>@item.BlockedUntil.ToString("dd/MM/yyyy HH:mm:ss")</td>
+                                <td>@item.Reason</td>
+                                <td>
+                                    @if (active)
+                                    {
+                                        using (Html.BeginForm("Unblock", "BlockedIps", FormMethod.Post, new { area = "Admin" }))
+                                        {
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@item.Id" />
+                                            <button type="submit"
+                                                    class="btn btn-sm btn-warning"
+                                                    onclick="return confirm('Mở khóa IP này?');">
+                                                Unblock
+                                            </button>
+                                        }
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>

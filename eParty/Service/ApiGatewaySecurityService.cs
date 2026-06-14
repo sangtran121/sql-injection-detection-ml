@@ -82,12 +82,27 @@ namespace eParty.Service
             {
                 ApiGatewayFeaturePayload payload = BuildPayload(context);
 
+                // 1. Nếu IP đang bị khóa tạm thời thì chặn ngay, không cần gọi Flask
+                ApiGatewayMlResult blockedResult =
+                    BlockedIpService.GetBlockedResultIfActive(payload.IpAddress);
+
+                if (blockedResult != null)
+                {
+                    ApiGatewayLogService.WriteLog(context, payload, blockedResult);
+                    return blockedResult;
+                }
+
+                // 2. Gọi Flask ML Detector như bình thường
                 ApiGatewayMlResult result = await _mlService
                     .PredictAsync(payload)
                     .ConfigureAwait(false);
 
-                // Ghi log xuống database.
-                // Nếu log lỗi thì ApiGatewayLogService tự catch, không làm crash request.
+                result = BlockedIpService.ApplyTemporaryBlockPolicy(
+                    payload,
+                    result
+                );
+
+                // 4. Ghi log kết quả cuối cùng
                 ApiGatewayLogService.WriteLog(context, payload, result);
 
                 return result;

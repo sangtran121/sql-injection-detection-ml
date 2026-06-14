@@ -1,0 +1,460 @@
+﻿@model eParty.Areas.Admin.Models.ApiGatewayDashboardViewModel
+
+@{
+    ViewBag.Title = "API Gateway Dashboard";
+    Layout = "~/Areas/Admin/Views/Shared/_LayoutAdmin.cshtml";
+}
+
+<div class="page-header">
+    <h3 class="fw-bold mb-3">API Gateway Security Dashboard</h3>
+
+    <ul class="breadcrumbs mb-3">
+        <li class="nav-home">
+            <a href="/Admin/Dashboard">
+                <i class="icon-home"></i>
+            </a>
+        </li>
+        <li class="separator">
+            <i class="icon-arrow-right"></i>
+        </li>
+        <li class="nav-item">
+            <a href="#">Security</a>
+        </li>
+        <li class="separator">
+            <i class="icon-arrow-right"></i>
+        </li>
+        <li class="nav-item">
+            <a href="#">API Gateway Dashboard</a>
+        </li>
+    </ul>
+</div>
+
+<div class="row">
+    <div class="col-sm-6 col-md-3">
+        <div class="card card-stats card-round">
+            <div class="card-body">
+                <div class="numbers">
+                    <p class="card-category">Total Logs</p>
+                    <h4 class="card-title">@Model.TotalLogs</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-sm-6 col-md-3">
+        <div class="card card-stats card-round">
+            <div class="card-body">
+                <div class="numbers">
+                    <p class="card-category">Today Logs</p>
+                    <h4 class="card-title">@Model.TodayLogs</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-sm-6 col-md-3">
+        <div class="card card-stats card-round">
+            <div class="card-body">
+                <div class="numbers">
+                    <p class="card-category">Last 24h Logs</p>
+                    <h4 class="card-title">@Model.Last24hLogs</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-sm-6 col-md-3">
+        <div class="card card-stats card-round">
+            <div class="card-body">
+                <div class="numbers">
+                    <p class="card-category">Average Risk</p>
+                    <h4 class="card-title">@Model.AverageRiskScore.ToString("0.0000")</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body d-flex justify-content-between align-items-center">
+                <div>
+                    <p class="card-category mb-1">ML Detector Service</p>
+
+                    @if (Model.MlServiceOnline)
+                    {
+                        <h4 class="text-success mb-0">
+                            Online - @Model.MlServiceStatus
+                        </h4>
+                    }
+                    else
+                    {
+                        <h4 class="text-danger mb-0">
+                            Offline
+                        </h4>
+                    }
+                </div>
+
+                <div class="text-center">
+                    <p class="card-category mb-1">Model Type</p>
+                    <h5>@Model.MlModelType</h5>
+                </div>
+
+                <div class="text-center">
+                    <p class="card-category mb-1">Feature Count</p>
+                    <h5>@Model.MlFeatureCount</h5>
+                </div>
+
+                <div>
+                    <a href="/Admin/ApiGatewayDashboard" class="btn btn-sm btn-primary">
+                        Refresh
+                    </a>
+                </div>
+            </div>
+
+            @if (!Model.MlServiceOnline && !string.IsNullOrEmpty(Model.MlErrorMessage))
+            {
+                <div class="card-footer">
+                    <span class="text-danger">
+                        Error: @Model.MlErrorMessage
+                    </span>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-sm-6 col-md-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <p class="card-category">Allow</p>
+                <h3 class="text-success">@Model.AllowCount</h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-sm-6 col-md-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <p class="card-category">Monitor</p>
+                <h3 class="text-warning">@Model.MonitorCount</h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-sm-6 col-md-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <p class="card-category">Rate Limited</p>
+                <h3 class="text-danger">@Model.ChallengeCount</h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-sm-6 col-md-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <p class="card-category">Block Logs</p>
+                <h3 class="text-dark">@Model.BlockCount</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-sm-6 col-md-6">
+        <div class="card">
+            <div class="card-body text-center">
+                <p class="card-category">Active Blocked IPs</p>
+                <h3 class="text-danger">@Model.ActiveBlockedIpCount</h3>
+
+                <a href="/Admin/BlockedIps" class="btn btn-sm btn-danger mt-2">
+                    View Blocked IPs
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-sm-6 col-md-6">
+        <div class="card">
+            <div class="card-body text-center">
+                <p class="card-category">Total Blocked IP Records</p>
+                <h3 class="text-dark">@Model.TotalBlockedIpCount</h3>
+
+                <a href="/Admin/BlockedIps?showAll=true" class="btn btn-sm btn-secondary mt-2">
+                    View History
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">Requests by Hour - Last 24h</div>
+            </div>
+            <div class="card-body">
+                <div style="height: 350px;">
+                    <canvas id="hourlyChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">Action Distribution</div>
+            </div>
+            <div class="card-body">
+                <div style="height: 350px;">
+                    <canvas id="actionChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">Top IP Addresses - Last 24h</div>
+            </div>
+            <div class="card-body">
+                <div style="height: 320px;">
+                    <canvas id="topIpChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">Top Routes - Last 24h</div>
+            </div>
+            <div class="card-body">
+                <div style="height: 320px;">
+                    <canvas id="topRouteChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <div class="card-title">Recent API Gateway Logs</div>
+
+        <a href="/Admin/ApiGatewayLogs" class="btn btn-primary btn-sm">
+            View All Logs
+        </a>
+    </div>
+
+    <div class="card-body">
+        @if (Model.RecentLogs == null || !Model.RecentLogs.Any())
+        {
+            <div class="alert alert-info">
+                Chưa có log.
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>Id</th>
+                            <th>IP</th>
+                            <th>Route</th>
+                            <th>Risk</th>
+                            <th>Label</th>
+                            <th>Action</th>
+                            <th>Source</th>
+                            <th>Rate/min</th>
+                            <th>Seq</th>
+                            <th>Created At</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.RecentLogs)
+                        {
+                            string actionClass = "badge-secondary";
+
+                            if (item.FinalAction == "allow")
+                            {
+                                actionClass = "badge-success";
+                            }
+                            else if (item.FinalAction == "monitor")
+                            {
+                                actionClass = "badge-warning";
+                            }
+                            else if (item.FinalAction == "challenge_or_rate_limit")
+                            {
+                                actionClass = "badge-danger";
+                            }
+                            else if (item.FinalAction == "block")
+                            {
+                                actionClass = "badge-danger";
+                            }
+
+                            string labelClass = item.PredictedLabel == "abnormal"
+                                ? "badge-danger"
+                                : "badge-success";
+
+                            <tr>
+                                <td>@item.Id</td>
+                                <td>@item.IpAddress</td>
+                                <td>
+                                    <strong>@item.Controller</strong>/<span>@item.ActionName</span>
+                                </td>
+                                <td>@item.RiskScore.ToString("0.0000")</td>
+                                <td>
+                                    <span class="badge @labelClass">
+                                        @item.PredictedLabel
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge @actionClass">
+                                        @item.FinalAction
+                                    </span>
+                                </td>
+                                <td>@item.DecisionSource</td>
+                                <td>@item.RequestRatePerMin.ToString("0.##")</td>
+                                <td>@item.SequenceLength.ToString("0.##")</td>
+                                <td>@item.CreatedAt.ToString("dd/MM/yyyy HH:mm:ss")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+@section scripts {
+    <script>
+        var hourLabels = @Html.Raw(Json.Encode(Model.HourLabels));
+        var hourAllowCounts = @Html.Raw(Json.Encode(Model.HourAllowCounts));
+        var hourMonitorCounts = @Html.Raw(Json.Encode(Model.HourMonitorCounts));
+        var hourChallengeCounts = @Html.Raw(Json.Encode(Model.HourChallengeCounts));
+        var hourBlockCounts = @Html.Raw(Json.Encode(Model.HourBlockCounts));
+
+        var actionLabels = @Html.Raw(Json.Encode(Model.ActionLabels));
+        var actionCounts = @Html.Raw(Json.Encode(Model.ActionCounts));
+
+        var topIpLabels = @Html.Raw(Json.Encode(Model.TopIpLabels));
+        var topIpCounts = @Html.Raw(Json.Encode(Model.TopIpCounts));
+
+        var topRouteLabels = @Html.Raw(Json.Encode(Model.TopRouteLabels));
+        var topRouteCounts = @Html.Raw(Json.Encode(Model.TopRouteCounts));
+
+        new Chart(document.getElementById("hourlyChart"), {
+            type: "line",
+            data: {
+                labels: hourLabels,
+                datasets: [
+                    {
+                        label: "Allow",
+                        data: hourAllowCounts,
+                        borderColor: "#31ce36",
+                        backgroundColor: "rgba(49, 206, 54, 0.1)",
+                        fill: false,
+                        tension: 0.3
+                    },
+                    {
+                        label: "Monitor",
+                        data: hourMonitorCounts,
+                        borderColor: "#ffad46",
+                        backgroundColor: "rgba(255, 173, 70, 0.1)",
+                        fill: false,
+                        tension: 0.3
+                    },
+                    {
+                        label: "Rate Limit",
+                        data: hourChallengeCounts,
+                        borderColor: "#f25961",
+                        backgroundColor: "rgba(242, 89, 97, 0.1)",
+                        fill: false,
+                        tension: 0.3
+                    },
+                    {
+                        label: "Block",
+                        data: hourBlockCounts,
+                        borderColor: "#dc3545",
+                        backgroundColor: "rgba(220, 53, 69, 0.1)",
+                        fill: false,
+                        tension: 0.3
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+
+        new Chart(document.getElementById("actionChart"), {
+            type: "doughnut",
+            data: {
+                labels: actionLabels,
+                datasets: [
+                    {
+                        data: actionCounts,
+                        backgroundColor: [
+                            "#31ce36",
+                            "#ffad46",
+                            "#f25961",
+                            "#dc3545"
+                        ]
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+
+        new Chart(document.getElementById("topIpChart"), {
+            type: "bar",
+            data: {
+                labels: topIpLabels,
+                datasets: [
+                    {
+                        label: "Requests",
+                        data: topIpCounts,
+                        backgroundColor: "#1572e8"
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+
+        new Chart(document.getElementById("topRouteChart"), {
+            type: "bar",
+            data: {
+                labels: topRouteLabels,
+                datasets: [
+                    {
+                        label: "Requests",
+                        data: topRouteCounts,
+                        backgroundColor: "#6861ce"
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+    </script>
+}

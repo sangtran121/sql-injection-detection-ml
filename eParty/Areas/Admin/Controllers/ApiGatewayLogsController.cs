@@ -244,5 +244,45 @@ namespace eParty.Areas.Admin.Controllers
 
             base.Dispose(disposing);
         }
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<ActionResult> DeleteOldLogs(int days = 7)
+        {
+            if (days < 1)
+            {
+                days = 7;
+            }
+
+            DateTime cutoffDate = DateTime.Now.AddDays(-days);
+
+            var oldLogs = await db.ApiGatewayLogs
+                .Where(x => x.CreatedAt < cutoffDate)
+                .ToListAsync();
+
+            db.ApiGatewayLogs.RemoveRange(oldLogs);
+
+            await db.SaveChangesAsync();
+
+            TempData["SuccessMessage"] =
+                "Đã xóa " + oldLogs.Count + " log cũ hơn " + days + " ngày.";
+
+            return RedirectToAction("Index");
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<ActionResult> DeleteAllLogs()
+        {
+            var allLogs = await db.ApiGatewayLogs.ToListAsync();
+
+            db.ApiGatewayLogs.RemoveRange(allLogs);
+
+            await db.SaveChangesAsync();
+
+            TempData["SuccessMessage"] =
+                "Đã xóa toàn bộ API Gateway logs.";
+
+            return RedirectToAction("Index");
+        }
     }
 }

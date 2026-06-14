@@ -127,6 +127,38 @@ namespace eParty.Service
                 return ApiGatewayMlResult.Allow("fallback_exception");
             }
         }
+        public async Task<ApiGatewayHealthResult> CheckHealthAsync()
+        {
+            try
+            {
+                using (var response = await _httpClient.GetAsync(_healthUrl).ConfigureAwait(false))
+                {
+                    string json = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        return ApiGatewayHealthResult.Offline(
+                            "HTTP " + (int)response.StatusCode
+                        );
+                    }
+
+                    var result = JsonConvert.DeserializeObject<ApiGatewayHealthResult>(json);
+
+                    if (result == null)
+                    {
+                        return ApiGatewayHealthResult.Offline("Invalid health response");
+                    }
+
+                    result.IsOnline = true;
+
+                    return result;
+                }
+            }
+            catch (Exception ex)
+            {
+                return ApiGatewayHealthResult.Offline(ex.Message);
+            }
+        }
 
         /// <summary>
         /// Kiểm tra Flask /health có chạy không.

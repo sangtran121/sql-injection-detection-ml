@@ -29,6 +29,59 @@
     </ul>
 </div>
 
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success">
+        @TempData["SuccessMessage"]
+    </div>
+}
+
+<div class="card">
+    <div class="card-header">
+        <div class="card-title">Log Maintenance</div>
+    </div>
+
+    <div class="card-body">
+        <div class="d-flex gap-2">
+            @using (Html.BeginForm(
+                "DeleteOldLogs",
+                "ApiGatewayLogs",
+                new { area = "Admin" },
+                FormMethod.Post,
+                new { style = "display:inline;" }
+            ))
+            {
+                @Html.AntiForgeryToken()
+
+                <input type="hidden" name="days" value="7" />
+
+                <button type="submit"
+                        class="btn btn-warning btn-sm"
+                        onclick="return confirm('Xóa log cũ hơn 7 ngày?');">
+                    Delete Logs Older Than 7 Days
+                </button>
+            }
+
+            @using (Html.BeginForm(
+                "DeleteAllLogs",
+                "ApiGatewayLogs",
+                new { area = "Admin" },
+                FormMethod.Post,
+                new { style = "display:inline; margin-left: 8px;" }
+            ))
+            {
+                @Html.AntiForgeryToken()
+
+                <button type="submit"
+                        class="btn btn-danger btn-sm"
+                        onclick="return confirm('Bạn chắc chắn muốn xóa TOÀN BỘ API Gateway logs?');">
+                    Delete All Logs
+                </button>
+            }
+        </div>
+    </div>
+</div>
+
 <div class="row">
     <div class="col-sm-6 col-md-3">
         <div class="card card-stats card-round">
@@ -214,7 +267,7 @@
                             }
                             else if (item.FinalAction == "block")
                             {
-                                actionClass = "badge-dark";
+                                actionClass = "badge-danger";
                             }
 
                             string riskClass = "text-success";

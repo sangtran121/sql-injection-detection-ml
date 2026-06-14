@@ -633,7 +633,9 @@
     <Compile Include="App_Start\RouteConfig.cs" />
     <Compile Include="App_Start\Startup.Auth.cs" />
     <Compile Include="Areas\Admin\AdminAreaRegistration.cs" />
+    <Compile Include="Areas\Admin\Controllers\ApiGatewayDashboardController.cs" />
     <Compile Include="Areas\Admin\Controllers\ApiGatewayLogsController.cs" />
+    <Compile Include="Areas\Admin\Controllers\BlockedIpsController.cs" />
     <Compile Include="Areas\Admin\Controllers\CalendarController.cs" />
     <Compile Include="Areas\Admin\Controllers\CategoriesController.cs" />
     <Compile Include="Areas\Admin\Controllers\CommentsController.cs" />
@@ -656,6 +658,7 @@
     <Compile Include="Areas\Admin\Controllers\UserDiscountsController.cs" />
     <Compile Include="Areas\Admin\Controllers\ReportsController.cs" />
     <Compile Include="Areas\Admin\Controllers\UserPermissionController.cs" />
+    <Compile Include="Areas\Admin\Models\ApiGatewayDashboardViewModel.cs" />
     <Compile Include="Areas\Admin\Models\ApiGatewayLogListViewModel.cs" />
     <Compile Include="Areas\Admin\Models\DashboardViewModel.cs" />
     <Compile Include="Areas\Admin\Models\FoodRecipeViewModel.cs" />
@@ -707,11 +710,17 @@
     <Compile Include="Migrations\202606140553098_AddApiGatewayLogs.Designer.cs">
       <DependentUpon>202606140553098_AddApiGatewayLogs.cs</DependentUpon>
     </Compile>
+    <Compile Include="Migrations\202606142110396_AddBlockedIps.cs" />
+    <Compile Include="Migrations\202606142110396_AddBlockedIps.Designer.cs">
+      <DependentUpon>202606142110396_AddBlockedIps.cs</DependentUpon>
+    </Compile>
     <Compile Include="Migrations\Configuration.cs" />
     <Compile Include="Models\AccountViewModels.cs" />
+    <Compile Include="Models\ApiGatewayHealthResult.cs" />
     <Compile Include="Models\ApiGatewayLog.cs" />
     <Compile Include="Models\ApiGatewayMlResult.cs" />
     <Compile Include="Models\AppDbContext.cs" />
+    <Compile Include="Models\BlockedIp.cs" />
     <Compile Include="Models\NewsDetailViewModel.cs" />
     <Compile Include="Models\ApplicationUser.cs" />
     <Compile Include="Models\Category.cs" />
@@ -744,6 +753,8 @@
     <Compile Include="Service\ApiGatewayLogService.cs" />
     <Compile Include="Service\ApiGatewayMlService.cs" />
     <Compile Include="Service\ApiGatewaySecurityService.cs" />
+    <Compile Include="Service\ApiGatewayTelegramAlertService.cs" />
+    <Compile Include="Service\BlockedIpService.cs" />
     <Compile Include="Service\EmailService.cs" />
     <Compile Include="Service\MenuService.cs" />
     <Compile Include="Service\PartyService.cs" />
@@ -2190,6 +2201,8 @@
     <Content Include="Areas\Admin\Views\PersonalAccount\UpdateInfo.cshtml" />
     <Content Include="Areas\Admin\Views\ApiGatewayLogs\Index.cshtml" />
     <Content Include="Areas\Admin\Views\ApiGatewayLogs\Details.cshtml" />
+    <Content Include="Areas\Admin\Views\ApiGatewayDashboard\Index.cshtml" />
+    <Content Include="Areas\Admin\Views\BlockedIps\Index.cshtml" />
     <None Include="Scripts\jquery-3.7.0.intellisense.js" />
     <Content Include="Scripts\jquery-3.7.0.js" />
     <Content Include="Scripts\jquery-3.7.0.min.js" />
@@ -2311,6 +2324,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Migrations\202606140553098_AddApiGatewayLogs.resx">
       <DependentUpon>202606140553098_AddApiGatewayLogs.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\202606142110396_AddBlockedIps.resx">
+      <DependentUpon>202606142110396_AddBlockedIps.cs</DependentUpon>
     </EmbeddedResource>
   </ItemGroup>
   <PropertyGroup>

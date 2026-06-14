@@ -129,6 +129,7 @@ namespace eParty.Helpers
                 // Nếu sau này có controller log riêng thì nên bỏ qua để admin còn xem log.
                 if (
                     controller == "apigatewaylogs" ||
+                    controller == "apigatewaydashboard" ||
                     controller == "blockedips"
                 )
                 {
