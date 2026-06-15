@@ -208,8 +208,8 @@ README.md
 ### Bước 1 — Tải source code
 
 ```bash
-git clone https://github.com/sangtran121/eparty-security-ml.git
-cd eparty-security-ml
+git clone https://github.com/sangtran121/sql-injection-detection-ml.git
+cd sql-injection-detection-ml
 ```
 
 Hoặc nhấn **Code → Download ZIP**, giải nén ra thư mục dễ nhớ.
