@@ -862,27 +862,6 @@ Hai module hoạt động **độc lập, không phụ thuộc lẫn nhau** — 
 
 ---
 
-## 🔐 Checklist trước khi push lên GitHub
-
-Trước khi commit, kiểm tra `Web.config` không còn chứa secret thật:
-
-```bash
-git diff --cached -- eParty/Web.config
-```
-
-Nếu thấy các key sau có giá trị thật, đổi về placeholder trước khi commit:
-
-```xml
-<add key="emailPassword" value="YOUR_EMAIL_APP_PASSWORD" />
-<add key="Telegram.BotToken" value="YOUR_BOT_TOKEN_HERE" />
-<add key="Telegram.ChatId" value="YOUR_CHAT_ID_HERE" />
-<add key="PublicBaseUrl" value="YOUR_NGROK_URL_HERE" />
-```
-
-> ⚠️ Ảnh chụp màn hình BotFather/Telegram trong `docs/images/` cũng cần được che/crop token thật trước khi push.
-
----
-
 ## 🤝 Đóng góp
 
 Nếu gặp lỗi hoặc muốn cải thiện, hãy mở [Issue](https://github.com/sangtran121/eparty-security-ml/issues) kèm:
