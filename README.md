@@ -77,7 +77,7 @@ Phiên bản hiện tại đã nâng cấp thành:
 </div>
 
 <div align="center">
-  <img src="docs/images/sql_upgrade_05_blocked_detectedby.png" alt="SQL Injection Blocked Detected By Stacking" width="650"/>
+  <img src="docs/images/sql_fallback_01_5010_active.png" alt="SQL Injection Blocked Detected By Stacking" width="650"/>
   <p><em>Trang bị chặn hiển thị rõ nguồn phát hiện: ML Stacking_5010</em></p>
 </div>
 
@@ -617,7 +617,7 @@ Nguồn phát hiện: ML Stacking_5010 | model=Stacking Ensemble | prob=0.9998 |
 ```
 
 <div align="center">
-  <img src="docs/images/sql_upgrade_05_blocked_detectedby.png" alt="SQLi blocked by 5010" width="650"/>
+  <img src="docs/images/sql_fallback_01_5010_active.png" alt="SQLi blocked by 5010" width="650"/>
 </div>
 
 ## Fallback SQL Injection
@@ -657,7 +657,6 @@ Webhook lưu whitelist
 Blocked page polling và tự retry request
 ```
 
-Ảnh cũ:
 
 <div align="center">
   <img src="docs/images/07_telegram_alert.png" alt="SQLi Telegram Alert" width="650"/>
@@ -913,7 +912,6 @@ Spam tiếp tục
   └── temporary block / HTTP 403
 ```
 
-Ảnh cũ vẫn dùng được:
 
 <div align="center">
   <img src="docs/images/api_gateway_04_rate_limit_block_test.png" alt="API Gateway rate limit block test" width="850"/>
@@ -927,7 +925,6 @@ URL:
 /Admin/BlockedIps
 ```
 
-Ảnh cũ:
 
 <div align="center">
   <img src="docs/images/api_gateway_06_blocked_ips_active.png" alt="Blocked IPs active" width="850"/>
@@ -948,7 +945,7 @@ Khi tạo temporary block:
 - Blocked until
 - Nút mở Dashboard/Blocked IPs nếu có `PublicBaseUrl`
 
-Ảnh cũ:
+
 
 <div align="center">
   <img src="docs/images/api_gateway_08_telegram_alert_buttons.png" alt="API Gateway Telegram alert" width="650"/>
@@ -990,34 +987,6 @@ Nhận xét:
 - New 5011 phát hiện đúng một số case mà 5001 bỏ sót, ví dụ distributed bot nhiều session ít user.
 - New 5011 chậm hơn do phải chạy nhiều base learners và meta model.
 - Vì vậy thiết kế tốt nhất là **5011 làm model chính, 5001 làm fallback**.
-
----
-
-## 🧪 Kịch bản demo đề xuất
-
-### Demo SQL Injection upgrade
-
-| Bước | Thao tác | Kết quả |
-|---|---|---|
-| 1 | Chạy `sql_injection_stacking_api.py` | Port 5010 online |
-| 2 | Chạy `app.py` | Port 5000 fallback online |
-| 3 | Mở `/Admin/SqlInjectionModelComparison` | Thấy trang so sánh 5000 vs 5010 |
-| 4 | Test payload SQLi | 5010 dự đoán SQLi, status blocked |
-| 5 | Gửi payload qua website | Blocked page hiện `ML Stacking_5010` |
-| 6 | Tắt 5010, giữ 5000 | Blocked page hiện `ML XGBoost_5000_Fallback` |
-
-### Demo API Gateway upgrade
-
-| Bước | Thao tác | Kết quả |
-|---|---|---|
-| 1 | Chạy `api_gateway_stacking_api_5011_v2.py` | Port 5011 online |
-| 2 | Chạy `api_gateway_detector.py` | Port 5001 fallback online |
-| 3 | Mở `/Admin/ApiGatewayDashboard` | Model Type: `stacking_ensemble_5011 (new_5011)` |
-| 4 | Mở `/Admin/ApiGatewayModelComparison` | Thấy 5001 vs 5011 |
-| 5 | Test 52 payload | New 5011 đạt 50/52, Old 5001 đạt 48/52 |
-| 6 | Mở `/Admin/ApiGatewayLogs` | Source có `new_5011_...` |
-| 7 | Tắt 5011, giữ 5001 | Dashboard hiện `random_forest_binary (fallback_5001)` |
-| 8 | Tắt cả 5011 và 5001 | Dashboard Offline nhưng website vẫn load |
 
 ---
 
@@ -1154,15 +1123,6 @@ ngrok http --host-header=rewrite https://localhost:44350
 
 Hai module hoạt động độc lập. Nếu một module gặp sự cố, module còn lại vẫn tiếp tục bảo vệ website. Các Flask service có fallback để tránh tình trạng website bị đứng hoặc crash khi model chính bị tắt.
 
----
-
-## 📌 Ghi chú khi đưa vào báo cáo
-
-Có thể viết kết luận:
-
-```text
-Hệ thống eParty đã được nâng cấp từ các mô hình đơn lẻ sang Stacking Ensemble cho cả hai lớp bảo mật. Với SQL Injection, mô hình Stacking :5010 được sử dụng làm model chính và XGBoost :5000 làm fallback. Với API Gateway, mô hình Stacking :5011 được sử dụng làm model chính và RandomForest :5001 làm fallback. Kết quả thực nghiệm cho thấy mô hình mới cải thiện khả năng phát hiện trong nhiều kịch bản, đặc biệt là các hành vi bất thường tinh vi ở API Gateway, trong khi vẫn giữ được cơ chế fail-safe để website hoạt động khi Flask API gặp lỗi.
-```
 
 ---
 
