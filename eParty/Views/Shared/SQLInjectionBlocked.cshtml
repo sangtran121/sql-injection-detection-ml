@@ -4,8 +4,15 @@
     string token = ViewData["Token"]?.ToString() ?? "";
     string returnUrl = ViewData["ReturnUrl"]?.ToString() ?? "/";
     string method = ViewData["Method"]?.ToString() ?? "GET";
-    // FormData được serialize thành JSON từ server
     string formDataJson = ViewData["FormData"]?.ToString() ?? "{}";
+
+    string detectedBy = ViewData["DetectedBy"]?.ToString() ?? "";
+    string suspiciousInput = ViewData["SuspiciousInput"]?.ToString() ?? "";
+
+    if (suspiciousInput.Length > 300)
+    {
+        suspiciousInput = suspiciousInput.Substring(0, 300) + "...";
+    }
 }
 
 <!DOCTYPE html>
@@ -111,6 +118,24 @@
             font-size: 0.95rem;
             display: none;
         }
+        .detail-box {
+            margin: 20px 0;
+            padding: 14px 18px;
+            background: rgba(0,0,0,0.22);
+            border-radius: 12px;
+            text-align: left;
+            font-size: 0.9rem;
+            word-break: break-word;
+        }
+
+            .detail-box strong {
+                color: #fde68a;
+            }
+
+        .detail-line {
+            margin: 8px 0;
+            line-height: 1.5;
+        }
 
         .spinner {
             display: inline-block;
@@ -139,6 +164,24 @@
             Hệ thống phát hiện hành vi đáng ngờ (SQL Injection).<br>
             Nếu đây là nhầm lẫn, hãy báo cáo để Admin xem xét.
         </p>
+        @if (!string.IsNullOrWhiteSpace(detectedBy) || !string.IsNullOrWhiteSpace(suspiciousInput))
+        {
+            <div class="detail-box">
+                @if (!string.IsNullOrWhiteSpace(detectedBy))
+                {
+                    <div class="detail-line">
+                        <strong>Nguồn phát hiện:</strong> @detectedBy
+                    </div>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(suspiciousInput))
+                {
+                    <div class="detail-line">
+                        <strong>Payload:</strong> @suspiciousInput
+                    </div>
+                }
+            </div>
+        }
 
         <div>
             <a href="javascript:history.back()" class="btn btn-primary">
@@ -177,6 +220,7 @@
             reported = true;
 
             var btn = document.getElementById('reportBtn');
+            document.getElementById('spinner').style.display = 'inline-block';
             btn.disabled = true;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang gửi...';
 
@@ -190,20 +234,21 @@
                         startPolling();
                     } else if (data.reason === 'rate_limited') {
                         // ← thêm case này
-                        spinner.style.display = 'none';
+                        document.getElementById('spinner').style.display = 'none';
                         showStatus('⏳ Bạn vừa gửi báo cáo rồi. Vui lòng chờ 1 phút trước khi gửi lại.');
                         btn.disabled = false;
                         btn.innerHTML = '<i class="fas fa-flag"></i> Báo cáo Sai cho Admin';
                         reported = false;
                     } else {
-                        spinner.style.display = 'none';
+                        document.getElementById('spinner').style.display = 'none';
                         showStatus('❌ Gửi thất bại. Vui lòng thử lại.');
                         btn.disabled = false;
                         btn.innerHTML = '<i class="fas fa-flag"></i> Báo cáo Sai cho Admin';
                         reported = false;
                     }
                 })
-                .catch(function() {
+                .catch(function () {
+                    document.getElementById('spinner').style.display = 'none';
                     showStatus('❌ Lỗi kết nối.');
                     btn.disabled = false;
                     reported = false;

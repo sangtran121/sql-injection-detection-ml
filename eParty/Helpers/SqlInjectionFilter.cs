@@ -6,7 +6,6 @@ using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using System.Web;
 using System.Web.Mvc;
 
@@ -14,14 +13,25 @@ namespace eParty.Helpers
 {
     public class SqlInjectionFilter : ActionFilterAttribute
     {
-        private static readonly string FlaskUrl = "http://localhost:5000/predict";
-        private static readonly double MLThreshold = 0.55;
+        private static readonly string NewFlaskUrl = "http://127.0.0.1:5010/predict";
+        private static readonly string OldFlaskUrl = "http://127.0.0.1:5000/predict";
 
-        // [CẢI THIỆN] Tăng timeout lên 1500ms để giảm false negative khi server bận
+        // Dùng chung HttpClient, timeout ngắn để không làm treo website
         private static readonly HttpClient client = new HttpClient
         {
             Timeout = TimeSpan.FromMilliseconds(1500)
         };
+        private class SqlInjectionMlDecision
+        {
+            public bool IsSqlInjection { get; set; }
+            public double Probability { get; set; }
+            public double RawProbability { get; set; }
+            public double Threshold { get; set; }
+            public string Status { get; set; }
+            public string Model { get; set; }
+            public string DecisionSource { get; set; }
+            public string ApiSource { get; set; }
+        }
 
         private static readonly string[] VietnameseWhitelist = {
             "tiệc cưới", "tiệc sinh nhật", "menu", "khách mời", "ngoài trời", "chủ đề",
@@ -60,6 +70,16 @@ namespace eParty.Helpers
 
         public override void OnActionExecuting(ActionExecutingContext filterContext)
         {
+            var controllerName = filterContext.ActionDescriptor.ControllerDescriptor.ControllerName;
+            
+
+            // Bỏ qua trang test so sánh model SQL Injection trong Admin.
+            // Nếu không bỏ qua, payload như admin' OR 1=1 -- sẽ bị filter chặn trước khi vào controller test.
+            if (controllerName.Equals("SqlInjectionModelComparison", StringComparison.OrdinalIgnoreCase))
+            {
+                base.OnActionExecuting(filterContext);
+                return;
+            }
             string controller = (filterContext.RouteData.Values["controller"]?.ToString() ?? "").ToLowerInvariant();
             string action = (filterContext.RouteData.Values["action"]?.ToString() ?? "").ToLowerInvariant();
 
@@ -87,24 +107,26 @@ namespace eParty.Helpers
 
             // [FIX] Bước 0: Check raw input (chưa strip comment) trước
             string rawLower = rawInput.ToLower();
-            if (IsClearlyDangerous(rawLower))
-            {
-                LogToDatabase(filterContext, rawInput, "Rule-based (raw)");
-                HandleSuspiciousRequest(filterContext);
-                return;
-            }
+            //if (IsClearlyDangerous(rawLower))
+            //{
+            //    string detectedBy = "Rule-based (raw)";
+            //    LogToDatabase(filterContext, rawInput, detectedBy);
+            //    HandleSuspiciousRequest(filterContext, detectedBy);
+            //    return;
+            //}
 
             // Normalize input
             string normalizedInput = NormalizeInput(rawInput);
             string lower = normalizedInput.ToLower().Trim();
 
             // Lớp 1: Rule-based trên normalized input
-            if (IsClearlyDangerous(lower))
-            {
-                LogToDatabase(filterContext, rawInput, "Rule-based (normalized)");
-                HandleSuspiciousRequest(filterContext);
-                return;
-            }
+            //if (IsClearlyDangerous(lower))
+            //{
+            //    string detectedBy = "Rule-based (normalized)";
+            //    LogToDatabase(filterContext, rawInput, detectedBy);
+            //    HandleSuspiciousRequest(filterContext, detectedBy);
+            //    return;
+            //}
 
             // Lớp 2: Whitelist tiếng Việt
             if (IsPureVietnameseText(lower))
@@ -175,56 +197,149 @@ namespace eParty.Helpers
         // [CẢI THIỆN] Đổi từ async fire-and-forget sang đồng bộ để chặn được request
         private bool CheckWithML(string query, ActionExecutingContext filterContext)
         {
-            try
+            SqlInjectionMlDecision decision = null;
+
+            // 1. Ưu tiên model mới Stacking Ensemble ở port 5010
+            decision = CallSqlInjectionApi(NewFlaskUrl, query, "Stacking_5010");
+
+            // 2. Nếu 5010 sập / timeout / lỗi HTTP thì fallback sang model cũ XGBoost 5000
+            if (decision == null)
             {
-                var payload = new { query = query };
-                var content = new StringContent(
-                    JsonConvert.SerializeObject(payload),
-                    Encoding.UTF8,
-                    "application/json"
-                );
-
-                // Chạy đồng bộ với timeout đã cấu hình trên HttpClient
-                var response = client.PostAsync(FlaskUrl, content).GetAwaiter().GetResult();
-
-                if (!response.IsSuccessStatusCode) return false;
-
-                var resultJson = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-                dynamic result = JsonConvert.DeserializeObject(resultJson);
-                double probability = Convert.ToDouble(result?.probability ?? 0);
-
-                if (probability > MLThreshold)
-                {
-                    LogToDatabase(filterContext, query, $"ML Model (prob={probability:F4})");
-                    HandleSuspiciousRequest(filterContext);
-                    return true; // Đã chặn
-                }
+                decision = CallSqlInjectionApi(OldFlaskUrl, query, "XGBoost_5000_Fallback");
             }
-            catch (TaskCanceledException)
+
+            // 3. Nếu cả hai API đều lỗi thì cho request đi tiếp để web không bị đứng
+            if (decision == null)
             {
-                // Flask timeout → fallback, cho qua (không crash website)
+                return false;
             }
-            catch
+
+            // 4. Không tự so threshold ở C# nữa.
+            // Python API đã quyết định is_sql_injection theo threshold riêng của từng model.
+            if (decision.IsSqlInjection)
             {
-                // Flask không chạy hoặc lỗi mạng → fallback, cho qua
+                string detectedBy =
+                    $"ML {decision.ApiSource} | model={decision.Model} | prob={decision.Probability:F4} | threshold={decision.Threshold:F4} | source={decision.DecisionSource}";
+
+                LogToDatabase(filterContext, query, detectedBy);
+
+                HandleSuspiciousRequest(filterContext, detectedBy);
+                return true;
             }
 
             return false;
+        }
+        private SqlInjectionMlDecision CallSqlInjectionApi(string apiUrl, string query, string apiSource)
+        {
+            try
+            {
+                var payload = new
+                {
+                    query = query
+                };
+
+                using (var content = new StringContent(
+                    JsonConvert.SerializeObject(payload),
+                    Encoding.UTF8,
+                    "application/json"))
+                {
+                    var response = client.PostAsync(apiUrl, content).GetAwaiter().GetResult();
+
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        return null;
+                    }
+
+                    var resultJson = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                    var obj = Newtonsoft.Json.Linq.JObject.Parse(resultJson);
+
+                    bool isSqlInjection = obj["is_sql_injection"] != null
+                        ? obj.Value<bool>("is_sql_injection")
+                        : false;
+
+                    double probability = obj["probability"] != null
+                        ? obj.Value<double>("probability")
+                        : 0;
+
+                    double rawProbability = obj["raw_probability"] != null
+                        ? obj.Value<double>("raw_probability")
+                        : probability;
+
+                    double threshold = obj["threshold"] != null
+                        ? obj.Value<double>("threshold")
+                        : (apiSource.Contains("5000") ? 0.52 : 0);
+
+                    string status = obj["status"] != null
+                        ? obj.Value<string>("status")
+                        : "";
+
+                    string model = obj["model"] != null
+                        ? obj.Value<string>("model")
+                        : apiSource;
+
+                    string decisionSource = obj["decision_source"] != null
+                        ? obj.Value<string>("decision_source")
+                        : apiSource;
+
+                    return new SqlInjectionMlDecision
+                    {
+                        IsSqlInjection = isSqlInjection,
+                        Probability = probability,
+                        RawProbability = rawProbability,
+                        Threshold = threshold,
+                        Status = status,
+                        Model = model,
+                        DecisionSource = decisionSource,
+                        ApiSource = apiSource
+                    };
+                }
+            }
+            catch
+            {
+                return null;
+            }
         }
 
         private string GetAllInput(HttpRequestBase request)
         {
             var sb = new StringBuilder();
 
-            if (request.Form != null)
-                foreach (var key in request.Form.AllKeys ?? Array.Empty<string>())
-                    sb.Append(' ').Append(request.Form[key]);
+            try
+            {
+                var unvalidated = request.Unvalidated;
 
-            if (request.QueryString != null)
-                foreach (var key in request.QueryString.AllKeys ?? Array.Empty<string>())
-                    sb.Append(' ').Append(request.QueryString[key]);
+                if (unvalidated.Form != null)
+                {
+                    foreach (var key in unvalidated.Form.AllKeys ?? Array.Empty<string>())
+                    {
+                        if (!string.IsNullOrWhiteSpace(key))
+                            sb.Append(' ').Append(key);
 
-            sb.Append(' ').Append(request.RawUrl ?? "");
+                        var value = unvalidated.Form[key];
+                        if (!string.IsNullOrWhiteSpace(value))
+                            sb.Append(' ').Append(value);
+                    }
+                }
+
+                if (unvalidated.QueryString != null)
+                {
+                    foreach (var key in unvalidated.QueryString.AllKeys ?? Array.Empty<string>())
+                    {
+                        if (!string.IsNullOrWhiteSpace(key))
+                            sb.Append(' ').Append(key);
+
+                        var value = unvalidated.QueryString[key];
+                        if (!string.IsNullOrWhiteSpace(value))
+                            sb.Append(' ').Append(value);
+                    }
+                }
+
+                sb.Append(' ').Append(request.RawUrl ?? "");
+            }
+            catch
+            {
+                return request.RawUrl ?? "";
+            }
 
             return sb.ToString().Trim();
         }
@@ -282,7 +397,7 @@ namespace eParty.Helpers
             string lower = input.ToLower().Trim();
             return DynamicWhitelist.Any(w => lower.Contains(w.ToLower()));
         }
-        private void HandleSuspiciousRequest(ActionExecutingContext filterContext)
+        private void HandleSuspiciousRequest(ActionExecutingContext filterContext, string detectedBy)
         {
             var request = filterContext.HttpContext.Request;
             string suspiciousInput = GetAllInput(request);
@@ -291,9 +406,22 @@ namespace eParty.Helpers
 
             // Serialize form data để replay sau khi whitelist
             var formDict = new System.Collections.Generic.Dictionary<string, string>();
-            if (request.Form != null)
-                foreach (var key in request.Form.AllKeys ?? new string[0])
-                    formDict[key] = request.Form[key];
+            try
+            {
+                var unvalidatedForm = request.Unvalidated.Form;
+
+                if (unvalidatedForm != null)
+                {
+                    foreach (var key in unvalidatedForm.AllKeys ?? new string[0])
+                    {
+                        formDict[key] = unvalidatedForm[key];
+                    }
+                }
+            }
+            catch
+            {
+                // Bỏ qua nếu không đọc được form
+            }
 
             string formDataJson = Newtonsoft.Json.JsonConvert.SerializeObject(formDict);
 
@@ -306,6 +434,7 @@ namespace eParty.Helpers
                 ViewData = new ViewDataDictionary
         {
             { "SuspiciousInput", suspiciousInput },
+            { "DetectedBy", detectedBy },
             { "Token",     token       },
             { "ReturnUrl", returnUrl   },
             { "Method",    method      },

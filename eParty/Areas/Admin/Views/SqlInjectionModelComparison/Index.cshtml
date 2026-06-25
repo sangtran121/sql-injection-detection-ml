@@ -1,0 +1,744 @@
+﻿@using System.Linq
+@model eParty.Areas.Admin.Controllers.SqlInjectionComparisonViewModel
+@{
+    ViewBag.Title = "SQL Injection Model Comparison";
+
+    // Nếu project bạn đang dùng _Layout.cshtml thay vì _LayoutAdmin.cshtml
+    // thì đổi dòng dưới thành:
+    // Layout = "~/Areas/Admin/Views/Shared/_Layout.cshtml";
+    Layout = "~/Areas/Admin/Views/Shared/_LayoutAdmin.cshtml";
+}
+
+
+<div class="page-inner">
+    <div class="page-header">
+        <h3 class="fw-bold mb-3">SQL Injection Model Comparison</h3>
+        <ul class="breadcrumbs mb-3">
+            <li class="nav-home">
+                <a href="/Admin/Dashboard">
+                    <i class="icon-home"></i>
+                </a>
+            </li>
+            <li class="separator">
+                <i class="icon-arrow-right"></i>
+            </li>
+            <li class="nav-item">
+                <a href="#">Security</a>
+            </li>
+            <li class="separator">
+                <i class="icon-arrow-right"></i>
+            </li>
+            <li class="nav-item">
+                <a href="#">SQL Injection Comparison</a>
+            </li>
+        </ul>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12">
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        Test payload trên model cũ và model mới
+                    </div>
+                    <p class="card-category">
+                        5000 = XGBoost cũ, 5010 = Stacking Ensemble mới
+                    </p>
+                </div>
+
+                <div class="card-body">
+                    @using (Html.BeginForm("Index", "SqlInjectionModelComparison", new { area = "Admin" }, FormMethod.Post))
+                    {
+                        @Html.AntiForgeryToken()
+
+                        <div class="form-group">
+                            <label for="Query"><strong>Payload / Query cần test</strong></label>
+                            @Html.TextAreaFor(m => m.Query, new
+                       {
+                           @class = "form-control",
+                           rows = "10",
+                           placeholder = "Mỗi dòng nhập một payload..."
+                       })
+                            @Html.ValidationMessageFor(m => m.Query, "", new { @class = "text-danger" })
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fa fa-play"></i> So sánh 5000 vs 5010
+                        </button>
+                    }
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Payload mẫu</div>
+                    <p class="card-category">Bấm vào mẫu để đưa vào ô test</p>
+                </div>
+                <div class="card-body">
+                    @if (Model.Samples != null)
+                    {
+                        foreach (var sample in Model.Samples)
+                        {
+                            <button type="button"
+                                    class="btn btn-sm btn-outline-secondary m-1 sample-btn"
+                                    data-query="@sample">
+                                @sample
+                            </button>
+                        }
+                    }
+                </div>
+            </div>
+
+            @if (Model.HasResult && Model.Rows != null && Model.Rows.Any())
+            {
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">Kết quả so sánh nhiều payload</div>
+                        <p class="card-category">
+                            Model cũ: XGBoost :5000 | Model mới: Stacking Ensemble :5010
+                        </p>
+                    </div>
+
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Payload</th>
+
+                                        <th>XGBoost Prediction</th>
+                                        <th>XGBoost Prob</th>
+                                        <th>XGBoost Status</th>
+                                        <th>XGBoost Time</th>
+
+                                        <th>Stacking Prediction</th>
+                                        <th>Stacking Prob</th>
+                                        <th>Stacking Raw Prob</th>
+                                        <th>Stacking Status</th>
+                                        <th>Stacking Time</th>
+
+                                        <th>So sánh</th>
+                                    </tr>
+                                </thead>
+
+                                <tbody>
+                                    @foreach (var row in Model.Rows)
+                                    {
+
+                                        var oldIsSqli = row.OldResult != null && row.OldResult.IsSqlInjection == true;
+                                        var newIsSqli = row.NewResult != null && row.NewResult.IsSqlInjection == true;
+
+                                        var isComparable =
+                                            row.OldResult != null &&
+                                            row.NewResult != null &&
+                                            row.OldResult.IsSqlInjection.HasValue &&
+                                            row.NewResult.IsSqlInjection.HasValue;
+
+                                        var isDifferent = isComparable &&
+                                            row.OldResult.IsSqlInjection.Value != row.NewResult.IsSqlInjection.Value;
+
+                                        var detailId = "difference-detail-" + row.No;
+                                        double oldProb = row.OldResult != null && row.OldResult.Probability.HasValue
+? row.OldResult.Probability.Value
+: 0;
+
+                                        double newProb = row.NewResult != null && row.NewResult.Probability.HasValue
+                                            ? row.NewResult.Probability.Value
+                                            : 0;
+
+                                        // Model cũ XGBoost API đang dùng threshold 0.52 nếu không trả threshold.
+                                        // Model mới Stacking API đang dùng threshold 0.55.
+                                        double oldThreshold = row.OldResult != null && row.OldResult.Threshold.HasValue
+                                            ? row.OldResult.Threshold.Value
+                                            : 0.52;
+
+                                        double newThreshold = row.NewResult != null && row.NewResult.Threshold.HasValue
+                                            ? row.NewResult.Threshold.Value
+                                            : 0.55;
+
+                                        double oldMargin = oldProb - oldThreshold;
+                                        double newMargin = newProb - newThreshold;
+                                        double probDelta = newProb - oldProb;
+
+                                        double oldTime = row.OldResult != null ? row.OldResult.ResponseTimeMs : 0;
+                                        double newTime = row.NewResult != null ? row.NewResult.ResponseTimeMs : 0;
+                                        double timeDelta = newTime - oldTime;
+
+                                        string oldPrediction = oldIsSqli ? "SQL Injection" : "Benign";
+                                        string newPrediction = newIsSqli ? "SQL Injection" : "Benign";
+
+                                        string oldStatus = row.OldResult != null ? row.OldResult.Status : "N/A";
+                                        string newStatus = row.NewResult != null ? row.NewResult.Status : "N/A";
+
+                                        bool predictionChanged = oldPrediction != newPrediction;
+                                        bool statusChanged = oldStatus != newStatus;
+
+                                        string moreConfidentModel = Math.Abs(newMargin) > Math.Abs(oldMargin)
+                                            ? "Model mới - Stacking :5010"
+                                            : "Model cũ - XGBoost :5000";
+
+                                        string reasonText = "";
+
+                                        if (oldProb < oldThreshold && newProb >= newThreshold)
+                                        {
+                                            reasonText = "Model cũ có probability thấp hơn ngưỡng nên cho phép request, trong khi model mới có probability vượt ngưỡng rõ rệt nên đánh dấu là SQL Injection.";
+                                        }
+                                        else if (oldProb >= oldThreshold && newProb < newThreshold)
+                                        {
+                                            reasonText = "Model cũ có probability vượt ngưỡng nên chặn request, trong khi model mới nằm dưới ngưỡng nên xem là Benign.";
+                                        }
+                                        else
+                                        {
+                                            reasonText = "Hai model đưa ra kết luận khác nhau do xác suất đầu ra và độ nhạy với payload không giống nhau.";
+                                        }
+
+                                        <tr>
+                                            <td>@row.No</td>
+
+                                            <td style="max-width: 350px; white-space: normal;">
+                                                <code>@row.Query</code>
+                                            </td>
+
+                                            <td>
+                                                @if (row.OldResult != null && row.OldResult.IsAvailable)
+                                                {
+                                                    if (oldIsSqli)
+                                                    {
+                                                        <span class="badge badge-danger">SQLi</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="badge badge-success">Benign</span>
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge badge-secondary">N/A</span>
+                                                }
+                                            </td>
+
+                                            <td>
+                                                @(row.OldResult != null && row.OldResult.Probability.HasValue
+                                        ? row.OldResult.Probability.Value.ToString("0.0000")
+                                        : "N/A")
+                                            </td>
+
+                                            <td>
+                                                @if (row.OldResult != null && row.OldResult.Status == "blocked")
+                                                {
+                                                    <span class="badge badge-danger">blocked</span>
+                                                }
+                                                else if (row.OldResult != null && row.OldResult.Status == "allowed")
+                                                {
+                                                    <span class="badge badge-success">allowed</span>
+                                                }
+                                                else
+                                                {
+                                                    <span>N/A</span>
+                                                }
+                                            </td>
+
+                                            <td>
+                                                @(row.OldResult != null
+                                        ? row.OldResult.ResponseTimeMs.ToString("0.00") + " ms"
+                                        : "N/A")
+                                            </td>
+
+                                            <td>
+                                                @if (row.NewResult != null && row.NewResult.IsAvailable)
+                                                {
+                                                    if (newIsSqli)
+                                                    {
+                                                        <span class="badge badge-danger">SQLi</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="badge badge-success">Benign</span>
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge badge-secondary">N/A</span>
+                                                }
+                                            </td>
+
+                                            <td>
+                                                @(row.NewResult != null && row.NewResult.Probability.HasValue
+                                        ? row.NewResult.Probability.Value.ToString("0.0000")
+                                        : "N/A")
+                                            </td>
+
+                                            <td>
+                                                @(row.NewResult != null && row.NewResult.RawProbability.HasValue
+                                        ? row.NewResult.RawProbability.Value.ToString("0.0000")
+                                        : "N/A")
+                                            </td>
+
+                                            <td>
+                                                @if (row.NewResult != null && row.NewResult.Status == "blocked")
+                                                {
+                                                    <span class="badge badge-danger">blocked</span>
+                                                }
+                                                else if (row.NewResult != null && row.NewResult.Status == "allowed")
+                                                {
+                                                    <span class="badge badge-success">allowed</span>
+                                                }
+                                                else
+                                                {
+                                                    <span>N/A</span>
+                                                }
+                                            </td>
+
+                                            <td>
+                                                @(row.NewResult != null
+                                        ? row.NewResult.ResponseTimeMs.ToString("0.00") + " ms"
+                                        : "N/A")
+                                            </td>
+
+                                            <td>
+                                                @if (!isComparable)
+                                                {
+                                                    <span class="badge badge-secondary">N/A</span>
+                                                }
+                                                else if (!isDifferent)
+                                                {
+                                                    <span class="badge badge-success">Same</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge badge-warning">Different</span>
+                                                    <br />
+                                                    <button type="button"
+                                                            class="btn btn-sm btn-info mt-2 detail-toggle"
+                                                            data-target="@detailId">
+                                                        Xem chi tiết
+                                                    </button>
+                                                }
+                                            </td>
+                                        </tr>
+                                        if (isDifferent)
+                                        {
+                                            <tr id="@detailId" class="difference-detail-row" style="display:none;">
+                                                <td colspan="12">
+                                                    <div class="card card-body border">
+                                                        <h5 class="mb-3 text-warning">
+                                                            Chi tiết khác biệt - Payload #@row.No
+                                                        </h5>
+
+                                                        <p>
+                                                            <strong>Payload:</strong>
+                                                            <code>@row.Query</code>
+                                                        </p>
+
+                                                        <div class="alert alert-info">
+                                                            <strong>Giải thích khác biệt:</strong>
+                                                            @reasonText
+                                                        </div>
+
+                                                        <h5 class="mt-3 mb-3 text-primary">1. Phân tích chỉ số quyết định</h5>
+
+                                                        <table class="table table-bordered table-sm">
+                                                            <tbody>
+                                                                <tr>
+                                                                    <th style="width: 320px;">Prediction model cũ</th>
+                                                                    <td>
+                                                                        @if (oldIsSqli)
+                                                                        {
+                                                                            <span class="badge badge-danger">SQL Injection</span>
+                                                                        }
+                                                                        else
+                                                                        {
+                                                                            <span class="badge badge-success">Benign</span>
+                                                                        }
+                                                                    </td>
+                                                                </tr>
+
+                                                                <tr>
+                                                                    <th>Prediction model mới</th>
+                                                                    <td>
+                                                                        @if (newIsSqli)
+                                                                        {
+                                                                            <span class="badge badge-danger">SQL Injection</span>
+                                                                        }
+                                                                        else
+                                                                        {
+                                                                            <span class="badge badge-success">Benign</span>
+                                                                        }
+                                                                    </td>
+                                                                </tr>
+
+                                                                <tr>
+                                                                    <th>Prediction changed?</th>
+                                                                    <td>
+                                                                        @if (predictionChanged)
+                                                                        {
+                                                                            <span class="badge badge-warning">Có thay đổi</span>
+                                                                        }
+                                                                        else
+                                                                        {
+                                                                            <span class="badge badge-success">Không đổi</span>
+                                                                        }
+                                                                    </td>
+                                                                </tr>
+
+                                                                <tr>
+                                                                    <th>Status model cũ</th>
+                                                                    <td>@oldStatus</td>
+                                                                </tr>
+
+                                                                <tr>
+                                                                    <th>Status model mới</th>
+                                                                    <td>@newStatus</td>
+                                                                </tr>
+
+                                                                <tr>
+                                                                    <th>Status changed?</th>
+                                                                    <td>
+                                                                        @if (statusChanged)
+                                                                        {
+                                                                            <span class="badge badge-warning">Có thay đổi</span>
+                                                                        }
+                                                                        else
+                                                                        {
+                                                                            <span class="badge badge-success">Không đổi</span>
+                                                                        }
+                                                                    </td>
+                                                                </tr>
+
+                                                                <tr>
+                                                                    <th>Probability model cũ</th>
+                                                                    <td>@oldProb.ToString("0.0000")</td>
+                                                                </tr>
+
+                                                                <tr>
+                                                                    <th>Probability model mới</th>
+                                                                    <td>@newProb.ToString("0.0000")</td>
+                                                                </tr>
+
+                                                                <tr>
+                                                                    <th>Độ chênh probability</th>
+                                                                    <td>
+                                                                        @if (probDelta > 0)
+                                                                        {
+                                                                            <span class="text-danger font-weight-bold">
+                                                                                @("+" + probDelta.ToString("0.0000"))
+                                                                            </span>
+                                                                        }
+                                                                        else if (probDelta < 0)
+                                                                        {
+                                                                            <span class="text-success font-weight-bold">
+                                                                                @probDelta.ToString("0.0000")
+                                                                            </span>
+                                                                        }
+                                                                        else
+                                                                        {
+                                                                            <span>0.0000</span>
+                                                                        }
+                                                                    </td>
+                                                                </tr>
+
+                                                                <tr>
+                                                                    <th>Threshold model cũ</th>
+                                                                    <td>@oldThreshold.ToString("0.00")</td>
+                                                                </tr>
+
+                                                                <tr>
+                                                                    <th>Threshold model mới</th>
+                                                                    <td>@newThreshold.ToString("0.00")</td>
+                                                                </tr>
+
+                                                                <tr>
+                                                                    <th>Khoảng cách tới threshold - model cũ</th>
+                                                                    <td>
+                                                                        @if (oldMargin >= 0)
+                                                                        {
+                                                                            <span class="text-danger font-weight-bold">
+                                                                                @("+" + oldMargin.ToString("0.0000"))
+                                                                            </span>
+                                                                        }
+                                                                        else
+                                                                        {
+                                                                            <span class="text-success font-weight-bold">
+                                                                                @oldMargin.ToString("0.0000")
+                                                                            </span>
+                                                                        }
+                                                                    </td>
+                                                                </tr>
+
+                                                                <tr>
+                                                                    <th>Khoảng cách tới threshold - model mới</th>
+                                                                    <td>
+                                                                        @if (newMargin >= 0)
+                                                                        {
+                                                                            <span class="text-danger font-weight-bold">
+                                                                                @("+" + newMargin.ToString("0.0000"))
+                                                                            </span>
+                                                                        }
+                                                                        else
+                                                                        {
+                                                                            <span class="text-success font-weight-bold">
+                                                                                @newMargin.ToString("0.0000")
+                                                                            </span>
+                                                                        }
+                                                                    </td>
+                                                                </tr>
+
+                                                                <tr>
+                                                                    <th>Model tự tin hơn</th>
+                                                                    <td><strong>@moreConfidentModel</strong></td>
+                                                                </tr>
+
+                                                                <tr>
+                                                                    <th>Response time model cũ</th>
+                                                                    <td>@oldTime.ToString("0.00") ms</td>
+                                                                </tr>
+
+                                                                <tr>
+                                                                    <th>Response time model mới</th>
+                                                                    <td>@newTime.ToString("0.00") ms</td>
+                                                                </tr>
+
+                                                                <tr>
+                                                                    <th>Chênh lệch thời gian</th>
+                                                                    <td>
+                                                                        @if (timeDelta > 0)
+                                                                        {
+                                                                            <span class="text-warning font-weight-bold">
+                                                                                @("+" + timeDelta.ToString("0.00") + " ms")
+                                                                            </span>
+                                                                        }
+                                                                        else if (timeDelta < 0)
+                                                                        {
+                                                                            <span class="text-success font-weight-bold">
+                                                                                @(timeDelta.ToString("0.00") + " ms")
+                                                                            </span>
+                                                                        }
+                                                                        else
+                                                                        {
+                                                                            <span>0.00 ms</span>
+                                                                        }
+                                                                    </td>
+                                                                </tr>
+                                                            </tbody>
+                                                        </table>
+
+                                                        <h5 class="mt-4 mb-3 text-primary">2. So sánh chi tiết từng model</h5>
+
+                                                        <div class="row">
+                                                            <div class="col-md-6">
+                                                                <h6>Model cũ - XGBoost :5000</h6>
+
+                                                                <table class="table table-sm table-bordered">
+                                                                    <tr>
+                                                                        <th>Prediction</th>
+                                                                        <td>@oldPrediction</td>
+                                                                    </tr>
+                                                                    <tr>
+                                                                        <th>Probability</th>
+                                                                        <td>@oldProb.ToString("0.0000")</td>
+                                                                    </tr>
+                                                                    <tr>
+                                                                        <th>Threshold</th>
+                                                                        <td>@oldThreshold.ToString("0.00")</td>
+                                                                    </tr>
+                                                                    <tr>
+                                                                        <th>Margin</th>
+                                                                        <td>@oldMargin.ToString("0.0000")</td>
+                                                                    </tr>
+                                                                    <tr>
+                                                                        <th>Status</th>
+                                                                        <td>@oldStatus</td>
+                                                                    </tr>
+                                                                    <tr>
+                                                                        <th>Decision Source</th>
+                                                                        <td>@(row.OldResult != null && !string.IsNullOrEmpty(row.OldResult.DecisionSource) ? row.OldResult.DecisionSource : "old_xgboost_5000")</td>
+                                                                    </tr>
+                                                                    <tr>
+                                                                        <th>Response Time</th>
+                                                                        <td>@oldTime.ToString("0.00") ms</td>
+                                                                    </tr>
+                                                                </table>
+
+                                                                <h6>Raw JSON XGBoost</h6>
+                                                                <pre class="bg-light p-2 border rounded" style="white-space:pre-wrap;">@(row.OldResult != null ? row.OldResult.RawJson : "N/A")</pre>
+                                                            </div>
+
+                                                            <div class="col-md-6">
+                                                                <h6>Model mới - Stacking :5010</h6>
+
+                                                                <table class="table table-sm table-bordered">
+                                                                    <tr>
+                                                                        <th>Prediction</th>
+                                                                        <td>@newPrediction</td>
+                                                                    </tr>
+                                                                    <tr>
+                                                                        <th>Probability</th>
+                                                                        <td>@newProb.ToString("0.0000")</td>
+                                                                    </tr>
+                                                                    <tr>
+                                                                        <th>Raw Probability</th>
+                                                                        <td>@(row.NewResult != null && row.NewResult.RawProbability.HasValue ? row.NewResult.RawProbability.Value.ToString("0.0000") : "N/A")</td>
+                                                                    </tr>
+                                                                    <tr>
+                                                                        <th>Threshold</th>
+                                                                        <td>@newThreshold.ToString("0.00")</td>
+                                                                    </tr>
+                                                                    <tr>
+                                                                        <th>Margin</th>
+                                                                        <td>@newMargin.ToString("0.0000")</td>
+                                                                    </tr>
+                                                                    <tr>
+                                                                        <th>Status</th>
+                                                                        <td>@newStatus</td>
+                                                                    </tr>
+                                                                    <tr>
+                                                                        <th>Decision Source</th>
+                                                                        <td>@(row.NewResult != null ? row.NewResult.DecisionSource : "N/A")</td>
+                                                                    </tr>
+                                                                    <tr>
+                                                                        <th>Response Time</th>
+                                                                        <td>@newTime.ToString("0.00") ms</td>
+                                                                    </tr>
+                                                                </table>
+                                                                @if (row.NewResult != null && row.NewResult.BaseModelScores != null && row.NewResult.BaseModelScores.Any())
+                                                                {
+                                                                    <h6 class="mt-3">Điểm từng base model trong Stacking</h6>
+
+                                                                    <table class="table table-sm table-bordered">
+                                                                        <thead>
+                                                                            <tr>
+                                                                                <th>Base model</th>
+                                                                                <th>Probability</th>
+                                                                                <th>Decision theo threshold @newThreshold.ToString("0.00")</th>
+                                                                            </tr>
+                                                                        </thead>
+                                                                        <tbody>
+                                                                            @foreach (var score in row.NewResult.BaseModelScores)
+                                                                            {
+                                                                                var scoreValue = score.Value.HasValue ? score.Value.Value : 0;
+                                                                                var baseDecision = scoreValue >= newThreshold ? "SQL Injection" : "Benign";
+
+                                                                                <tr>
+                                                                                    <td>@score.Key</td>
+                                                                                    <td>
+                                                                                        @(score.Value.HasValue ? score.Value.Value.ToString("0.0000") : "N/A")
+                                                                                    </td>
+                                                                                    <td>
+                                                                                        @if (score.Value.HasValue && score.Value.Value >= newThreshold)
+                                                                                        {
+                                                                                            <span class="badge badge-danger">SQLi</span>
+                                                                                        }
+                                                                                        else if (score.Value.HasValue)
+                                                                                        {
+                                                                                            <span class="badge badge-success">Benign</span>
+                                                                                        }
+                                                                                        else
+                                                                                        {
+                                                                                            <span class="badge badge-secondary">N/A</span>
+                                                                                        }
+                                                                                    </td>
+                                                                                </tr>
+                                                                            }
+                                                                        </tbody>
+                                                                    </table>
+
+                                                                    <div class="alert alert-info">
+                                                                        <strong>Lưu ý:</strong>
+                                                                        Đây là probability của từng base model bên trong Stacking.
+                                                                        Stacking không chọn model có điểm cao nhất và cũng không lấy trung bình đơn giản.
+                                                                        Final probability được tạo bởi meta model:
+                                                                        <strong>@(string.IsNullOrEmpty(row.NewResult.MetaModel) ? "Logistic Regression" : row.NewResult.MetaModel)</strong>.
+                                                                    </div>
+                                                                }
+                                                                <h6>Raw JSON Stacking</h6>
+                                                                <pre class="bg-light p-2 border rounded" style="white-space:pre-wrap;">@(row.NewResult != null ? row.NewResult.RawJson : "N/A")</pre>
+                                                            </div>
+                                                        </div>
+
+                                                        <div class="alert alert-warning mt-4">
+                                                            <strong>Nhận xét tự động:</strong>
+                                                            <br />
+                                                            - XGBoost dự đoán <strong>@oldPrediction</strong> với probability <strong>@oldProb.ToString("0.0000")</strong>.
+                                                            <br />
+                                                            - Stacking dự đoán <strong>@newPrediction</strong> với probability <strong>@newProb.ToString("0.0000")</strong>.
+                                                            <br />
+                                                            - Chênh lệch xác suất giữa hai model là
+                                                            <strong>@((probDelta >= 0 ? "+" : "") + probDelta.ToString("0.0000"))</strong>.
+                                                            <br />
+                                                            - So với threshold, XGBoost có margin <strong>@oldMargin.ToString("0.0000")</strong>,
+                                                            còn Stacking có margin <strong>@newMargin.ToString("0.0000")</strong>.
+                                                            <br />
+                                                            - Dòng này thể hiện hai model có độ nhạy khác nhau với cùng một payload.
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        }
+
+                                        if ((row.OldResult != null && !string.IsNullOrEmpty(row.OldResult.Error)) ||
+                                            (row.NewResult != null && !string.IsNullOrEmpty(row.NewResult.Error)))
+                                        {
+                                            <tr>
+                                                <td></td>
+                                                <td colspan="11">
+                                                    <strong>Error:</strong>
+                                                    <br />
+                                                    Old: @(row.OldResult != null ? row.OldResult.Error : "N/A")
+                                                    <br />
+                                                    New: @(row.NewResult != null ? row.NewResult.Error : "N/A")
+                                                </td>
+                                            </tr>
+
+                                        }
+                                    }
+                                </tbody>
+
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+@section scripts {
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            var buttons = document.querySelectorAll(".sample-btn");
+            var input = document.getElementById("Query");
+
+            buttons.forEach(function (btn) {
+                btn.addEventListener("click", function () {
+                    var value = btn.getAttribute("data-query");
+
+                    if (input.value.trim().length === 0) {
+                        input.value = value;
+                    } else {
+                        input.value = input.value + "\n" + value;
+                    }
+                });
+            });
+
+            var detailButtons = document.querySelectorAll(".detail-toggle");
+
+            detailButtons.forEach(function (btn) {
+                btn.addEventListener("click", function () {
+                    var targetId = btn.getAttribute("data-target");
+                    var row = document.getElementById(targetId);
+
+                    if (!row) return;
+
+                    if (row.style.display === "none" || row.style.display === "") {
+                        row.style.display = "table-row";
+                        btn.innerText = "Ẩn chi tiết";
+                    } else {
+                        row.style.display = "none";
+                        btn.innerText = "Xem chi tiết";
+                    }
+                });
+            });
+        });
+    </script>
+}
