@@ -1,12 +1,13 @@
 # 🛡️ eParty — Hệ thống bảo mật đa lớp với Machine Learning
 
-Website quản lý dịch vụ tiệc cưới **eParty** (ASP.NET MVC) được tích hợp **2 lớp phòng thủ độc lập**, mỗi lớp sử dụng một mô hình Machine Learning riêng để phát hiện và ngăn chặn tấn công theo thời gian thực — kết hợp Rule Engine, Admin Review qua Telegram và Dashboard giám sát trực quan.
+Website quản lý dịch vụ tiệc cưới **eParty** (ASP.NET MVC) được tích hợp **2 lớp phòng thủ độc lập**, mỗi lớp có mô hình Machine Learning riêng để phát hiện và ngăn chặn tấn công theo thời gian thực. Phiên bản hiện tại đã được nâng cấp từ mô hình đơn sang **Stacking Ensemble**, đồng thời vẫn giữ mô hình cũ làm **fallback** để hệ thống không bị gián đoạn khi model mới tắt hoặc lỗi.
 
-[![Python](https://img.shields.io/badge/Python-3.10%2F3.11-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
+[![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
 [![Flask](https://img.shields.io/badge/Flask-API-000000?style=for-the-badge&logo=flask&logoColor=white)](https://flask.palletsprojects.com)
-[![XGBoost](https://img.shields.io/badge/XGBoost-ML%20Model-FF6600?style=for-the-badge)](https://xgboost.readthedocs.io)
-[![RandomForest](https://img.shields.io/badge/RandomForest-Anomaly%20Detection-2E8B57?style=for-the-badge)](https://scikit-learn.org)
 [![ASP.NET](https://img.shields.io/badge/ASP.NET-MVC%204.8-512BD4?style=for-the-badge&logo=dotnet&logoColor=white)](https://dotnet.microsoft.com)
+[![XGBoost](https://img.shields.io/badge/XGBoost-Base%20Model-FF6600?style=for-the-badge)](https://xgboost.readthedocs.io)
+[![LightGBM](https://img.shields.io/badge/LightGBM-Base%20Model-9ACD32?style=for-the-badge)](https://lightgbm.readthedocs.io)
+[![Stacking](https://img.shields.io/badge/Stacking-Ensemble-6A5ACD?style=for-the-badge)](https://scikit-learn.org)
 [![Telegram](https://img.shields.io/badge/Telegram-Bot%20Alert-26A5E4?style=for-the-badge&logo=telegram&logoColor=white)](https://core.telegram.org/bots)
 
 <div align="center">
@@ -18,7 +19,8 @@ Website quản lý dịch vụ tiệc cưới **eParty** (ASP.NET MVC) được 
 
 ## 📑 Mục lục
 
-- [Tổng quan kiến trúc bảo mật](#-tổng-quan-kiến-trúc-bảo-mật)
+- [Tổng quan kiến trúc bảo mật](#️-tổng-quan-kiến-trúc-bảo-mật)
+- [Điểm nâng cấp chính](#-điểm-nâng-cấp-chính)
 - [Yêu cầu hệ thống](#️-yêu-cầu-hệ-thống)
 - [Cấu trúc thư mục](#-cấu-trúc-thư-mục)
 - [Hướng dẫn cài đặt](#-hướng-dẫn-cài-đặt)
@@ -33,26 +35,29 @@ Website quản lý dịch vụ tiệc cưới **eParty** (ASP.NET MVC) được 
 
 ## 🏗️ Tổng quan kiến trúc bảo mật
 
-Mọi request gửi đến eParty sẽ đi qua **2 lớp phòng thủ độc lập**, mỗi lớp có Flask ML API, dashboard và rule engine riêng:
+Mọi request gửi đến eParty đi qua **2 lớp phòng thủ độc lập**. Mỗi lớp có model chính mới, model cũ làm fallback, rule engine, logging và dashboard riêng.
 
-```
+```text
                         Client Request
                               │
                               ▼
         ┌─────────────────────────────────────────────┐
         │   LỚP 1 — SqlInjectionFilter                │
-        │   Rule-based + XGBoost (TF-IDF)              │
-        │   Flask :5000  /predict                      │
+        │   Rule-based + ML SQL Injection Detection   │
+        │                                             │
+        │   Primary :5010 — Stacking Ensemble          │
+        │   Fallback :5000 — XGBoost                  │
         │   → Phát hiện SQL Injection trong payload    │
         └───────────────────┬───────────────────────────┘
                               │ an toàn
                               ▼
         ┌─────────────────────────────────────────────┐
         │   LỚP 2 — ApiGatewayMlFilter                │
-        │   Realtime Behavior + RandomForest           │
-        │   Flask :5001  /predict-api-gateway          │
-        │   → Phát hiện spam / flood / bot theo        │
-        │     hành vi truy cập (rate, session...)      │
+        │   Realtime Behavior + API Gateway ML        │
+        │                                             │
+        │   Primary :5011 — Stacking Ensemble          │
+        │   Fallback :5001 — RandomForest binary       │
+        │   → Phát hiện spam/flood/bot theo hành vi    │
         └───────────────────┬───────────────────────────┘
                               │ allow
                               ▼
@@ -61,12 +66,41 @@ Mọi request gửi đến eParty sẽ đi qua **2 lớp phòng thủ độc l�
 
 | | Module 1 — SQL Injection | Module 2 — API Gateway Security |
 |---|---|---|
-| **Bảo vệ** | Nội dung payload (form, query string) | Hành vi truy cập (rate, session, sequence) |
-| **Model** | XGBoost + TF-IDF | RandomForest (binary normal/abnormal) |
-| **Flask port** | `5000` | `5001` |
-| **Action** | allow / block (403) | allow / monitor / rate-limit (429) / block (403) |
+| **Bảo vệ** | Nội dung payload, form, query string | Hành vi truy cập, rate, session, graph API |
+| **Model chính** | Stacking Ensemble `:5010` | Stacking Ensemble `:5011` |
+| **Model fallback** | XGBoost `:5000` | RandomForest binary `:5001` |
+| **So sánh model** | `/Admin/SqlInjectionModelComparison` | `/Admin/ApiGatewayModelComparison` |
+| **Action** | allow / block 403 | allow / monitor / rate-limit 429 / block 403 |
 | **Admin Review** | Telegram Whitelist / Bỏ qua | Telegram Temporary Block alert |
-| **Dashboard** | `/SQLInjectionLog` | `/Admin/ApiGatewayDashboard`, `/Admin/ApiGatewayLogs`, `/Admin/BlockedIps` |
+| **Fail-safe** | 5010 lỗi → fallback 5000; cả hai lỗi → cho qua | 5011 lỗi → fallback 5001; cả hai lỗi → web vẫn load |
+
+---
+
+## ✨ Điểm nâng cấp chính
+
+### ✅ Nâng cấp SQL Injection
+
+- Thêm model mới **Stacking Ensemble** chạy tại port `5010`.
+- Giữ model cũ **XGBoost** tại port `5000` làm fallback.
+- `SqlInjectionFilter` ưu tiên gọi `5010`, nếu lỗi thì tự fallback về `5000`.
+- Trang blocked page hiển thị rõ nguồn phát hiện: `ML Stacking_5010` hoặc `ML XGBoost_5000_Fallback`.
+- Thêm trang so sánh model: `/Admin/SqlInjectionModelComparison`.
+
+### ✅ Nâng cấp API Gateway
+
+- Thêm model mới **Stacking Ensemble 5011** gồm:
+  - `RandomForest`
+  - `ExtraTrees`
+  - `LightGBM`
+  - `XGBoost`
+  - Meta model: `LogisticRegression_pure_stacking`
+- Giữ model cũ **RandomForest binary 5001** làm fallback.
+- `ApiGatewayMlService` ưu tiên gọi `5011`, nếu lỗi thì fallback sang `5001`.
+- Thêm endpoint ML-only cho so sánh công bằng:
+  - `5001/predict-api-gateway-ml-only`
+  - `5011/predict-api-gateway-ml-only`
+- Thêm trang so sánh: `/Admin/ApiGatewayModelComparison`.
+- Dashboard hiển thị model đang dùng: `stacking_ensemble_5011 (new_5011)` hoặc `random_forest_binary (fallback_5001)`.
 
 ---
 
@@ -75,131 +109,105 @@ Mọi request gửi đến eParty sẽ đi qua **2 lớp phòng thủ độc l�
 | Thành phần | Yêu cầu |
 |-----------|---------|
 | Hệ điều hành | Windows 10 / Windows 11 |
-| IDE | Visual Studio 2022 (Community Edition) |
+| IDE | Visual Studio 2022 |
 | Framework | .NET Framework 4.8 |
-| Python | **3.10 trở lên** *(khuyến nghị 3.10/3.11; đã test với Python 3.14 trên Windows)* |
-| RAM | Tối thiểu 8GB *(khuyến nghị 16GB)* |
-| Telegram | Bot token + Chat ID (dùng chung cho cả 2 module) |
-| ngrok | Tùy chọn — cần nếu muốn bấm nút Telegram / mở Dashboard từ điện thoại |
+| Python | Python 3.10+ *(đã test với Python 3.14 trên Windows)* |
+| RAM | Tối thiểu 8GB, khuyến nghị 16GB+ |
+| Telegram | Bot token + Chat ID |
+| ngrok | Tùy chọn, dùng cho Telegram button / webhook |
 
 ---
 
 ## 📂 Cấu trúc thư mục
 
-```
+```text
 Repository root/
-├── 📁 eParty/                           ← ASP.NET MVC web project
-├── 📁 sql_injection_ml/                 ← Flask ML Module 1 (Python)
-└── 📁 api_gateway_ml/                   ← Flask ML Module 2 (Python)
+├── eParty/                           ← ASP.NET MVC web project
+├── sql_injection_ml/                 ← Flask ML Module 1
+├── api_gateway_ml/                   ← Flask ML Module 2
+└── docs/images/                      ← Ảnh minh họa README
 ```
 
-**Chi tiết từng thư mục:**
+### Web project `eParty/`
 
-```
+```text
 eParty/
+├── App_Start/
+│   └── FilterConfig.cs
 │
-├── 📁 App_Start/
-│   ├── FilterConfig.cs                  ← Đăng ký SqlInjectionFilter + ApiGatewayMlFilter
-│   ├── RouteConfig.cs
-│   └── ...
+├── Areas/Admin/
+│   ├── Controllers/
+│   │   ├── ApiGatewayDashboardController.cs
+│   │   ├── ApiGatewayLogsController.cs
+│   │   ├── BlockedIpsController.cs
+│   │   ├── ApiGatewayModelComparisonController.cs
+│   │   └── SqlInjectionModelComparisonController.cs
+│   │
+│   └── Views/
+│       ├── ApiGatewayDashboard/Index.cshtml
+│       ├── ApiGatewayLogs/Index.cshtml
+│       ├── BlockedIps/Index.cshtml
+│       ├── ApiGatewayModelComparison/Index.cshtml
+│       ├── SqlInjectionModelComparison/Index.cshtml
+│       └── Shared/_LayoutAdmin.cshtml
 │
-├── 📁 Areas/
-│   └── Admin/
-│       ├── 📁 Controllers/
-│       │   ├── ApiGatewayDashboardController.cs
-│       │   ├── ApiGatewayLogsController.cs
-│       │   ├── BlockedIpsController.cs
-│       │   └── ...                      ← Các controller quản trị khác
-│       │
-│       ├── 📁 Models/
-│       │   ├── ApiGatewayDashboardViewModel.cs
-│       │   ├── ApiGatewayLogListViewModel.cs
-│       │   └── DashboardViewModel.cs
-│       │
-│       └── 📁 Views/
-│           ├── ApiGatewayDashboard/
-│           │   └── Index.cshtml
-│           ├── ApiGatewayLogs/
-│           │   ├── Index.cshtml
-│           │   └── Details.cshtml
-│           ├── BlockedIps/
-│           │   └── Index.cshtml
-│           └── Shared/
-│               ├── _Layout.cshtml
-│               ├── _LayoutAdmin.cshtml
-│               └── ...
-│
-├── 📁 Controllers/
-│   ├── AccountController.cs
-│   ├── HomeController.cs
-│   ├── SQLInjectionLogController.cs     ← Dashboard log SQLi + ReportFalsePositive
+├── Controllers/
+│   ├── SQLInjectionLogController.cs
 │   ├── SqlInjectionTestController.cs
-│   ├── TelegramWebhookController.cs     ← Webhook callback cho SQL Injection whitelist
-│   └── ...
+│   └── TelegramWebhookController.cs
 │
-├── 📁 Helpers/
-│   ├── SqlInjectionFilter.cs            ← LỚP 1: Rule-based + ML + Whitelist
-│   ├── TelegramHelper.cs                ← Gửi alert + inline keyboard lên Telegram
-│   └── ApiGatewayMlFilter.cs            ← LỚP 2: Action Filter chống spam/flood
+├── Helpers/
+│   ├── SqlInjectionFilter.cs
+│   ├── ApiGatewayMlFilter.cs
+│   └── TelegramHelper.cs
 │
-├── 📁 Migrations/
-│   ├── ..._AddSQLInjectionLog.cs
-│   ├── ..._AddPendingWhitelists.cs
-│   ├── ..._AddApiGatewayLogs.cs
-│   └── ..._AddBlockedIps.cs
+├── Models/
+│   ├── SQLInjectionLog.cs
+│   ├── PendingWhitelist.cs
+│   ├── ApiGatewayLog.cs
+│   ├── BlockedIp.cs
+│   ├── ApiGatewayMlResult.cs
+│   └── ApiGatewayHealthResult.cs
 │
-├── 📁 Models/
-│   ├── SQLInjectionLog.cs               ← Log tấn công SQLi
-│   ├── PendingWhitelist.cs              ← Token whitelist pending (Telegram)
-│   ├── ApiGatewayLog.cs                 ← Log request API Gateway
-│   ├── BlockedIp.cs                     ← IP bị khóa tạm thời
-│   ├── ApiGatewayMlResult.cs            ← Kết quả dự đoán từ Flask (NotMapped)
-│   ├── ApiGatewayHealthResult.cs        ← Trạng thái Online/Offline của Flask :5001
-│   └── AppDbContext.cs                  ← DbContext (toàn bộ bảng trên)
-│
-├── 📁 Service/
+├── Service/
+│   ├── ApiGatewayMlService.cs
+│   ├── ApiGatewaySecurityService.cs
 │   ├── ApiGatewayLogService.cs
-│   ├── ApiGatewayMlService.cs           ← HTTP client gọi Flask :5001 (có fallback)
-│   ├── ApiGatewaySecurityService.cs     ← Trích xuất feature + gọi ML + rule engine
 │   ├── ApiGatewayTelegramAlertService.cs
-│   ├── BlockedIpService.cs
-│   └── ...
+│   └── BlockedIpService.cs
 │
-├── 📁 Views/
-│   ├── SQLInjectionLog/
-│   │   └── Index.cshtml
-│   ├── SqlInjectionTest/
-│   │   └── Index.cshtml
-│   ├── Shared/
-│   │   ├── SQLInjectionBlocked.cshtml   ← Trang 403 SQLi (Báo cáo + auto-retry)
-│   │   └── ...
-│   └── ...
-│
-├── Web.config
-├── Global.asax
-└── Startup.cs
+└── Views/Shared/SQLInjectionBlocked.cshtml
+```
 
-sql_injection_ml/                        ← ML Module 1 (Python)
-├── app.py                               ← Flask REST API (port 5000)
-├── sql_injection_detection.py           ← Script train XGBoost model
+### Python services
+
+```text
+sql_injection_ml/
+├── app.py                              ← XGBoost fallback API :5000
+├── sql_injection_stacking_api.py       ← Stacking primary API :5010
 ├── Modified_SQL_Dataset.csv
 └── models/
     ├── sql_injection_xgboost_model.pkl
-    └── tfidf_vectorizer.pkl
+    ├── tfidf_vectorizer.pkl
+    ├── sql_injection_stacking_model.pkl
+    └── tfidf_vectorizer_stacking.pkl
 
-api_gateway_ml/                          ← ML Module 2 (Python)
-├── api_gateway_detector.py              ← Flask REST API (port 5001)
-├── train_api_gateway_model.py           ← Script train model
-├── api-access-behaviour-anomaly-dataset.csv
+api_gateway_ml/
+├── api_gateway_detector.py             ← RandomForest fallback API :5001
+├── api_gateway_stacking_api_5011_v2.py  ← Stacking primary API :5011
+├── train_api_gateway_model.py
+├── train_api_gateway_stacking_5011_v2.py
 └── models/
     ├── api_gateway_model.pkl
     ├── api_gateway_features.pkl
     ├── api_gateway_labels.pkl
-    └── api_gateway_model_type.pkl
-
-docs/images/                             ← Ảnh minh họa README
-README.md
+    ├── api_gateway_model_type.pkl
+    ├── api_gateway_stacking_model_5011.pkl
+    ├── api_gateway_stacking_scaler_5011.pkl
+    └── api_gateway_stacking_metadata_5011.pkl
 ```
+
+> Tên file `.pkl` có thể khác tùy phiên bản code, nhưng cần đảm bảo các file model/vectorizer/scaler/metadata nằm đúng trong thư mục `models/` của từng Flask service.
 
 ---
 
@@ -216,46 +224,45 @@ Hoặc nhấn **Code → Download ZIP**, giải nén ra thư mục dễ nhớ.
 
 ---
 
-### Bước 2 — Cài đặt Python & thư viện cho cả 2 module
-
-Chạy từ **thư mục root của repo** (nơi chứa `eParty/`, `sql_injection_ml/`, `api_gateway_ml/`):
+### Bước 2 — Cài đặt Python & thư viện
 
 ```cmd
 python -m venv venv
 venv\Scripts\activate
 
-pip install flask pandas scikit-learn xgboost joblib numpy
+pip install flask pandas scikit-learn xgboost lightgbm joblib numpy
 ```
-
-> 💡 `venv` được tạo ở root repo. Khi `cd` vào thư mục con để chạy Flask, cần dùng `..\venv\Scripts\activate` (xem Bước chạy hệ thống bên dưới).
 
 ---
 
-### Bước 3 — Train cả 2 model
+### Bước 3 — Train hoặc kiểm tra model
 
-**Module 1 — SQL Injection:**
+Nếu repository đã có sẵn file `.pkl`, có thể bỏ qua bước train và chạy Flask trực tiếp.
 
-> 📦 Dataset: [Modified SQL Injection Dataset](https://www.kaggle.com/datasets/sajid576/sql-injection-dataset) (Kaggle) — file `Modified_SQL_Dataset.csv` đã có trong thư mục `sql_injection_ml/`.
+**SQL Injection — model cũ XGBoost:**
 
 ```cmd
 cd sql_injection_ml
 python sql_injection_detection.py
 ```
-Tạo ra `sql_injection_xgboost_model.pkl` và `tfidf_vectorizer.pkl`.
 
-**Module 2 — API Gateway:**
-
-> 📦 Dataset: [API Access Behaviour Anomaly Dataset](https://www.kaggle.com/datasets/tangodelta/api-access-behaviour-anomaly-dataset) (Kaggle) — file `api-access-behaviour-anomaly-dataset.csv` đã có trong thư mục `api_gateway_ml/`.
+**API Gateway — model cũ RandomForest:**
 
 ```cmd
 cd api_gateway_ml
 python train_api_gateway_model.py
 ```
-Tạo ra `api_gateway_model.pkl`, `api_gateway_features.pkl`, `api_gateway_labels.pkl`, `api_gateway_model_type.pkl`.
 
-> ⚠️ Đảm bảo các file `.pkl` nằm đúng trong thư mục `models/` của từng Flask service:
-> - `sql_injection_ml/models/`
-> - `api_gateway_ml/models/`
+**API Gateway — model mới Stacking 5011:**
+
+```cmd
+cd api_gateway_ml
+python train_api_gateway_stacking_5011_v2.py
+```
+
+> Với SQL Injection Stacking `5010`, cần đảm bảo trong `sql_injection_ml/models/` có:
+> - `sql_injection_stacking_model.pkl`
+> - `tfidf_vectorizer_stacking.pkl`
 
 ---
 
@@ -264,32 +271,23 @@ Tạo ra `api_gateway_model.pkl`, `api_gateway_features.pkl`, `api_gateway_label
 Mở **Package Manager Console** trong Visual Studio:
 
 ```powershell
-Add-Migration InitialCreate
-Add-Migration AddPendingWhitelist
-Add-Migration AddApiGatewayLogs
-Add-Migration AddBlockedIps
 Update-Database
 ```
 
-> 💡 Nếu các migration trên đã có sẵn trong repo (đã commit), chỉ cần chạy `Update-Database`.
+Nếu chưa có migration thì tạo migration tương ứng cho:
 
-Kiểm tra trong SQL Server Management Studio — phải có các bảng:
-- `SQLInjectionLogs`, `PendingWhitelists` (Module 1)
-- `ApiGatewayLogs`, `BlockedIps` (Module 2)
+```text
+SQLInjectionLogs
+PendingWhitelists
+ApiGatewayLogs
+BlockedIps
+```
 
 ---
 
 ### Bước 5 — Cấu hình Telegram Bot & Web.config
 
-**5.1 Tạo bot:** nhắn `/newbot` cho [@BotFather](https://t.me/BotFather), nhận **Bot Token**.
-
-> 🖼️ **BotFather trả về Bot Token sau khi tạo bot thành công:**
->
-> ![BotFather Token](docs/images/02_botfather.png)
-
-**5.2 Lấy Chat ID:** nhắn bất kỳ tin nhắn cho bot, truy cập `https://api.telegram.org/bot<TOKEN>/getUpdates`, tìm `"id"` trong `"chat"`.
-
-**5.3 Thêm vào `Web.config` (`<appSettings>`) — dùng chung cho cả 2 module:**
+Trong `Web.config`:
 
 ```xml
 <add key="Telegram.BotToken" value="YOUR_BOT_TOKEN_HERE" />
@@ -298,30 +296,35 @@ Kiểm tra trong SQL Server Management Studio — phải có các bảng:
 <add key="PublicBaseUrl" value="https://your-ngrok-url.ngrok-free.dev" />
 ```
 
-> ⚠️ Không commit token thật, Gmail App Password hoặc secret lên GitHub.
-
-**5.4 `TelegramHelper.cs` (nếu chưa đọc từ Web.config):**
-
-```csharp
-private static readonly string BotToken = "YOUR_BOT_TOKEN_HERE";
-private static readonly string ChatId   = "YOUR_CHAT_ID_HERE";
-```
+> Không commit token thật, Gmail App Password hoặc secret lên GitHub.
 
 ---
 
-### Bước 6 — Mở & build project Web
+### Bước 6 — Build web project
 
-1. Mở **Visual Studio 2022** → **Open a project or solution** → `eParty.sln`
-2. Click chuột phải Solution → **Restore NuGet Packages**
-3. Build: `Ctrl + Shift + B`
+1. Mở `eParty.sln` bằng Visual Studio 2022.
+2. Restore NuGet Packages.
+3. Build solution bằng `Ctrl + Shift + B`.
 
 ---
 
 ## ▶️ Chạy toàn bộ hệ thống
 
-> ⚠️ **Phải khởi động đúng thứ tự — cả 2 Flask API trước khi mở website**
+Khuyến nghị chạy đủ 4 Flask service để kiểm tra cả model mới và fallback.
 
-### 1️⃣ Flask — SQL Injection Detector (port 5000)
+### 1️⃣ SQL Injection primary — Stacking `5010`
+
+```cmd
+cd sql_injection_ml
+..\venv\Scripts\activate
+python sql_injection_stacking_api.py
+```
+
+> 🖼️ **SQL Injection Stacking API chạy tại port 5010:**
+>
+> ![SQLi Stacking 5010](docs/images/sql_upgrade_01_flask_5010_stacking.png)
+
+### 2️⃣ SQL Injection fallback — XGBoost `5000`
 
 ```cmd
 cd sql_injection_ml
@@ -329,11 +332,23 @@ cd sql_injection_ml
 python app.py
 ```
 
-> 🖼️ **Flask Module 1 khởi động thành công, đang nhận request `/predict`:**
+> 🖼️ **SQL Injection XGBoost fallback chạy tại port 5000:**
 >
-> ![Flask SQLi Running](docs/images/03_flask_running.png)
+> ![SQLi XGBoost 5000](docs/images/sql_upgrade_02_flask_5000_fallback.png)
 
-### 2️⃣ Flask — API Gateway Detector (port 5001)
+### 3️⃣ API Gateway primary — Stacking `5011`
+
+```cmd
+cd api_gateway_ml
+..\venv\Scripts\activate
+python api_gateway_stacking_api_5011_v2.py
+```
+
+> 🖼️ **API Gateway Stacking Ensemble 5011 đang chạy:**
+>
+> ![API Gateway Stacking 5011](docs/images/api_upgrade_01_flask_5011_stacking.png)
+
+### 4️⃣ API Gateway fallback — RandomForest `5001`
 
 ```cmd
 cd api_gateway_ml
@@ -341,263 +356,132 @@ cd api_gateway_ml
 python api_gateway_detector.py
 ```
 
-> 🖼️ **Flask Module 2 khởi động — load model RandomForest, 13 features, 2 nhãn (normal/abnormal):**
+> 🖼️ **API Gateway RandomForest fallback 5001 đang chạy:**
 >
-> ![Flask API Gateway Detector](docs/images/api_gateway_01_flask_detector.png)
+> ![API Gateway Fallback 5001](docs/images/api_upgrade_02_flask_5001_fallback.png)
 
-### 3️⃣ Khởi động Website ASP.NET
+### 5️⃣ Khởi động Website ASP.NET
 
-Trong Visual Studio: chuột phải `eParty` → **Set as Startup Project** → `F5`
+Trong Visual Studio: chuột phải `eParty` → **Set as Startup Project** → `F5`.
 
-Website mở tại `https://localhost:44350`
+Website mở tại:
 
-### 4️⃣ (Tùy chọn) Bật ngrok cho Telegram & Dashboard từ điện thoại
-
-```cmd
-ngrok http --host-header=rewrite https://localhost:44350
+```text
+https://localhost:44350
 ```
 
-Đăng ký webhook (thay URL ngrok của bạn):
-```
-https://api.telegram.org/bot<TOKEN>/setWebhook?url=https://YOUR_NGROK_URL/TelegramWebhook
-```
-
-> 🖼️ **ngrok tunnel active — SQL Injection dùng webhook callback nhận lệnh Whitelist/Bỏ qua từ Telegram (200 OK):**
->
-> ![ngrok Tunnel](docs/images/api_gateway_10_ngrok_public_url.png)
-
-> 💡 ngrok free tier đổi URL mỗi lần restart → phải đăng ký lại webhook và cập nhật `PublicBaseUrl` trong `Web.config`.
-
----
 ---
 
 # 🛡️ MODULE 1 — SQL Injection Detection
 
-Phát hiện và ngăn chặn tấn công SQL Injection theo thời gian thực với **3 lớp phòng thủ**:
+Module SQL Injection phát hiện và ngăn chặn tấn công SQL Injection theo thời gian thực bằng nhiều lớp:
 
-- **Lớp 1 — Rule-based Filter:** Chặn ngay các pattern SQLi rõ ràng (nhanh, không cần gọi API)
-- **Lớp 2 — ML Model (XGBoost):** Phát hiện các biến thể tinh vi, obfuscated payloads
-- **Lớp 3 — Admin Review (Telegram):** Cho phép Admin xem xét và whitelist false positive theo thời gian thực
+- **Rule-based Filter:** chặn ngay các pattern rõ ràng.
+- **ML chính — Stacking Ensemble 5010:** phân loại payload bằng mô hình ensemble.
+- **ML fallback — XGBoost 5000:** dùng khi model 5010 tắt hoặc lỗi.
+- **Admin Review qua Telegram:** cho phép whitelist false positive theo thời gian thực.
+- **Blocked Page:** hiển thị nguồn phát hiện và cho phép người dùng báo cáo sai.
 
-### 🎯 Tính năng nổi bật
+## 🔄 Luồng xử lý SQL Injection
 
-| Tính năng | Mô tả |
-|-----------|-------|
-| **3 lớp bảo vệ** | Rule-based → ML Model → Admin Review |
-| **Phát hiện đa dạng** | Classic, Union-based, Time-based, Error-based, Obfuscated SQLi |
-| **Hỗ trợ tiếng Việt** | Không chặn nhầm mô tả tiệc cưới, menu, chi phí, teambuilding |
-| **Telegram Bot** | Alert real-time với nút ✅ Whitelist / ❌ Bỏ qua cho Admin |
-| **Auto-retry** | Sau khi Admin whitelist, trang tự động retry request gốc |
-| **Polling** | Trang 403 tự polling 3 giây, phát hiện approval → redirect |
-| **Dashboard log** | Ghi đầy đủ IP, URL, payload, loại tấn công vào database |
-| **Webhook callback** | Admin bấm nút Telegram → whitelist ngay không cần đăng nhập web |
-
-### 🏗️ Kiến trúc xử lý
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│              SqlInjectionFilter (ActionFilter)               │
-│                                                                │
-│  Bước 0: Bypass whitelist (SQLInjectionLog, TestPage)         │
-│  Bước 1: Dynamic Whitelist — payload đã được Admin duyệt?     │
-│  Bước 2: Rule-based (raw input) — pattern rõ ràng?            │
-│  Bước 3: Normalize (decode URL, strip /**/ comments)          │
-│  Bước 4: Rule-based (normalized) — sau khi unescape?          │
-│  Bước 5: Vietnamese Whitelist — text tiếng Việt thuần túy?    │
-│  Bước 6: Flask ML API (XGBoost) — prob > 0.55?                │
-└──────────────────────────────────────────────────────────────┘
-          │ Bị chặn                        │ An toàn
-          ▼                                ▼
-┌──────────────────────┐         ┌──────────────────────┐
-│  Ghi log vào DB       │         │  Request xử lý       │
-│  Hiện trang 403       │         │  bình thường ✅       │
-│  Lưu PendingWhitelist │         └──────────────────────┘
-└──────────┬────────────┘
-           │ User bấm "Báo cáo Sai"
-           ▼
-┌──────────────────────┐
-│  Telegram Bot Alert  │
-│  ✅ Whitelist  ❌ Bỏ qua │
-└──────────┬────────────┘
-           │ Admin bấm ✅
-           ▼
-┌──────────────────────┐
-│  Webhook callback     │
-│  → Whitelist token    │
-│  → Polling phát hiện  │
-│  → Auto-retry request │
-└──────────────────────┘
+```text
+Request
+  │
+  ▼
+SqlInjectionFilter
+  │
+  ├─ Dynamic Whitelist?
+  ├─ Rule-based raw?
+  ├─ Normalize input?
+  ├─ Rule-based normalized?
+  ├─ Vietnamese whitelist?
+  ├─ ML Primary :5010 Stacking?
+  └─ ML Fallback :5000 XGBoost?
+        │
+        ├─ SQLi → Block 403 + Log + Telegram review
+        └─ Benign → Allow
 ```
 
-### 🔄 Luồng hoạt động đầy đủ
+## 🤖 Model SQL Injection
 
+| Thành phần | Bản cũ | Bản mới |
+|---|---|---|
+| Port | `5000` | `5010` |
+| Model | XGBoost + TF-IDF | Stacking Ensemble + TF-IDF |
+| Vai trò | Fallback | Primary |
+| Endpoint | `/predict` | `/predict` |
+| Fallback | Không | Nếu 5010 lỗi → gọi 5000 |
+
+## 🧪 Trang so sánh model
+
+Truy cập:
+
+```text
+/Admin/SqlInjectionModelComparison
 ```
-1. Người dùng submit form có chứa nội dung đáng ngờ
-2. SqlInjectionFilter chặn → trang 403
-   (Lưu token + returnUrl + formData vào PendingWhitelists)
-3. Người dùng bấm "Báo cáo Sai cho Admin"
-4. Telegram nhận alert với payload đầy đủ + 2 nút bấm
-   ✅ Whitelist payload này    ❌ Bỏ qua
-5. Admin bấm ✅ → Webhook /TelegramWebhook nhận callback
-   → AddToWhitelist(payload), đánh dấu token IsUsed = true
-6. Trang 403 polling mỗi 3 giây phát hiện IsUsed = true
-   → Tự động replay request gốc (GET redirect / POST form submit)
-7. Request thực hiện thành công ✅ — không cần nhập lại gì
-```
 
-### 🧪 Cách test
+Trang này so sánh trực tiếp model cũ `5000 XGBoost` và model mới `5010 Stacking`.
 
-Truy cập `https://localhost:44350/SqlInjectionTest/Index`, dán payload và chọn chế độ:
-
-| Chế độ | Mô tả |
-|--------|-------|
-| **Only ML** | Kiểm tra thuần bằng XGBoost Model |
-| **Full Filter** | Giả lập filter thực tế (Rule-based + ML) |
-
-> 🖼️ **Trang test payload với chế độ Full Filter — 20 payloads đều bị chặn:**
+> 🖼️ **Trang SQL Injection Model Comparison:**
 >
-> ![Test Page](docs/images/05_test_page.png)
+> ![SQLi Model Comparison](docs/images/sql_upgrade_03_model_comparison.png)
 
-**Payload mẫu:**
+> 🖼️ **Kết quả so sánh nhiều payload SQL Injection:**
+>
+> ![SQLi Comparison Results](docs/images/sql_upgrade_04_comparison_results.png)
 
-```sql
--- Nên bị chặn (MALICIOUS)
-' OR 1=1 --
-UNION SELECT username, password FROM users --
-'; DROP TABLE Events; --
-CAST((SELECT password FROM users) AS int)
-1' AND (SELECT COUNT(*) FROM information_schema.tables) > 0 --
-WAITFOR DELAY '0:0:5'--
-admin'/**/OR/**/1=1--
+## 🚫 Blocked Page hiển thị nguồn phát hiện
 
--- Không nên bị chặn (BENIGN)
-Tiệc cưới ngoài trời với view sông, menu 8 món, 120 khách
-Tôi muốn đặt tiệc sinh nhật cho bé gái 8 tuổi, chủ đề công chúa
-Teambuilding công ty ABC vào ngày 20/05/2026 tại Quận 7
+Khi payload bị chặn, trang 403 hiển thị rõ:
+
+- Nguồn phát hiện.
+- Model đang dùng.
+- Probability.
+- Threshold.
+- Payload đầy đủ.
+- Nút báo cáo sai cho Admin.
+
+> 🖼️ **Blocked Page khi model mới 5010 phát hiện SQL Injection:**
+>
+> ![SQLi Blocked by Stacking](docs/images/sql_upgrade_05_blocked_detectedby.png)
+
+## 🔁 Fallback SQL Injection
+
+Khi `5010` tắt nhưng `5000` vẫn chạy, hệ thống tự động fallback sang XGBoost.
+
+> 🖼️ **Blocked Page khi fallback sang XGBoost 5000:**
+>
+> ![SQLi Fallback XGBoost](docs/images/sql_fallback_02_5000_fallback.png)
+
+## 📲 Telegram Review
+
+SQL Injection vẫn hỗ trợ Telegram Review:
+
+```text
+User bị chặn → Báo cáo sai → Telegram alert → Admin bấm Whitelist → Auto retry
 ```
 
-> 🖼️ **Trang 403 hiển thị khi request bị chặn:**
->
-> ![Blocked Page](docs/images/06_blocked_page.png)
+Ảnh cũ vẫn dùng được:
 
-> 🖼️ **Telegram alert với payload đầy đủ + nút Whitelist / Bỏ qua:**
->
 > ![Telegram Alert](docs/images/07_telegram_alert.png)
 
-> 🖼️ **Dashboard log — lọc theo Tất cả / Rule-based / ML Model / Blocked:**
->
-> ![Dashboard Log](docs/images/08_dashboard_log.png)
-
-### 🔍 Chi tiết kỹ thuật
-
-**Rule-based Filter** — Literal patterns (so sánh chuỗi):
-```
-or 1=1, union select, drop table, information_schema,
-cast(, convert(, sleep(, benchmark(, @@version, xp_cmdshell, ...
-```
-Regex patterns (compiled, tái sử dụng):
-```regex
-cast\s*\(.+?as\s+int
-union\s*/\*+\*/\s*select
-0x[0-9a-f]{2,}
-select\s+.+\s+from\s+\w+
-;\s*(drop|delete|update|insert)\s+
-```
-
-**Normalize Input** — trước khi kiểm tra rule:
-1. URL decode nhiều lần (chống double encoding: `%2527` → `%27` → `'`)
-2. Strip SQL comments `/*...*/` bằng chuỗi rỗng (không phải space): `SE/**/LECT` → `SELECT` ✅
-3. Normalize whitespace
-
-**ML Model:**
-
-| Thành phần | Chi tiết |
-|-----------|---------|
-| Thuật toán | XGBoost Classifier |
-| Feature extraction | TF-IDF (char_wb, n-gram 1-3, max 5000 features) |
-| Dataset | [Modified SQL Injection Dataset](https://www.kaggle.com/datasets/sajid576/sql-injection-dataset) (Kaggle) |
-| Threshold | `probability > 0.55` → chặn |
-| Timeout | 1500ms (fallback: cho qua nếu Flask không phản hồi) |
-
-**Dynamic Whitelist:** lưu trong bộ nhớ (in-memory `List<string>`), nạp khi Admin phê duyệt qua Telegram. Reset khi restart IIS — nếu cần persistent, lưu vào DB và load lại khi khởi động.
-
-### 📊 Kết quả Model
-
-| Metric | XGBoost | RandomForest |
-|--------|---------|--------------|
-| Accuracy (Test) | **99.69%** | **99.43%** |
-| Precision (SQLi) | 99.96% | 100% |
-| Recall (SQLi) | 99.21% | 98.46% |
-| F1-score (SQLi) | 99.58% | 99.23% |
-| False Positive (Tiếng Việt) | Thấp (có whitelist) | Trung bình |
-| Tốc độ inference | ~5ms | ~8ms |
-
-> 🖼️ **Kết quả huấn luyện XGBoost & RandomForest và Super Stress Test (40+ cases):**
->
-> ![Model Results](docs/images/9_model_results.png)
-
-*XGBoost được chọn là model chính do accuracy cao hơn (99.69% vs 99.43%) và train acc (99.94%) gần với test acc, chứng tỏ không bị overfit.*
-
----
 ---
 
 # 🛡️ MODULE 2 — API Gateway Security
 
-Lớp phòng thủ thứ hai, hoạt động **độc lập với Module 1**, tập trung vào **hành vi truy cập** thay vì nội dung payload — phát hiện spam/flood request, chống bot, giới hạn tốc độ và tự động khóa IP tạm thời.
+Module API Gateway tập trung vào **hành vi truy cập** thay vì nội dung payload: rate, session, sequence, graph API, self-loop, số API duy nhất, số user/session theo IP.
 
-Mô-đun kết hợp:
+Phiên bản hiện tại dùng:
 
-- **ASP.NET MVC Action Filter** chặn request trước khi vào Controller
-- **Realtime Feature Extraction** tính hành vi truy cập theo session và IP
-- **Flask ML Detector** (RandomForest, binary normal/abnormal) dự đoán bất thường
-- **Rule Engine** quyết định rate-limit/block
-- **Temporary Blocked IP** khóa IP tạm thời
-- **Admin Dashboard** giám sát realtime
-- **Telegram Alert** cảnh báo khi tạo block mới
+- **ML chính — Stacking Ensemble 5011**
+- **ML fallback — RandomForest binary 5001**
+- **Rule Engine production**
+- **Temporary Blocked IP**
+- **Dashboard realtime**
+- **Telegram Alert**
+- **ML-only comparison page**
 
-### 🎯 Mục tiêu
-
-| Loại hành vi | Cách xử lý |
-|---|---|
-| Request bình thường | Cho phép truy cập |
-| Request có rủi ro ML cao | Monitor và ghi log |
-| Request spam liên tục | Trả HTTP **429** Rate Limit |
-| IP tiếp tục spam sau rate-limit | Trả HTTP **403** Temporary Block |
-| ML Detector bị tắt/offline | Website vẫn hoạt động, dashboard báo Offline |
-| IP bị khóa | Admin xem và Unblock trong trang quản trị |
-| Tấn công xảy ra | Gửi Telegram alert realtime |
-
-### 🏗️ Kiến trúc xử lý
-
-```
-Client Request
-      │
-      ▼
-ASP.NET MVC ApiGatewayMlFilter
-      │
-      ▼
-Realtime Feature Extraction
-      │
-      ▼
-Flask API Gateway ML Detector (:5001)
-      │
-      ▼
-ML Prediction + Rule Engine
-      │
-      ▼
-Decision: allow / monitor / challenge_or_rate_limit / block
-      │
-      ▼
-Temporary Blocked IP Policy
-      │
-      ▼
-Save Logs to Database
-      │
-      ▼
-Admin Dashboard + Telegram Alert
-```
-
-### 🧠 Realtime Features (13 features)
+## 🧠 Realtime Features (13 features)
 
 | Feature | Ý nghĩa |
 |---|---|
@@ -615,234 +499,221 @@ Admin Dashboard + Telegram Alert
 | `graph_self_loops` | Số lần gọi lặp lại cùng API |
 | `graph_avg_degree` | Bậc trung bình của graph |
 
-Các feature này được gửi sang Flask API Gateway Detector để dự đoán hành vi bất thường.
+## 🤖 Model API Gateway
 
-### 🤖 Flask API Gateway ML Detector
+| Thành phần | Bản cũ | Bản mới |
+|---|---|---|
+| Port | `5001` | `5011` |
+| Model | RandomForest binary | Stacking Ensemble |
+| Vai trò | Fallback | Primary |
+| Endpoint production | `/predict-api-gateway` | `/predict-api-gateway` |
+| Endpoint so sánh | `/predict-api-gateway-ml-only` | `/predict-api-gateway-ml-only` |
+| Feature count | 13 | 13 |
+| Labels | normal / abnormal | normal / abnormal |
 
-Chạy tại port `5001`:
+Stacking `5011` sử dụng các base model:
 
-```
-POST http://localhost:5001/predict-api-gateway
-GET  http://localhost:5001/health
-```
-
-Model: `random_forest_binary` — Labels: `normal` / `abnormal` — 13 features — Dataset: [API Access Behaviour Anomaly](https://www.kaggle.com/datasets/tangodelta/api-access-behaviour-anomaly-dataset)
-
-> 🖼️ **Flask Detector khởi động — load model, log realtime mỗi request (`cold-start allow`):**
->
-> ![API Gateway Flask Detector](docs/images/api_gateway_01_flask_detector.png)
-
-### 📊 Admin Dashboard
-
-Truy cập `/Admin/ApiGatewayDashboard` — hiển thị:
-
-- Tổng số log / Log trong ngày / Log 24h gần nhất / Average Risk
-- ML Detector Online/Offline, Model Type, Feature Count
-- Allow / Monitor / Rate Limited / Block Logs
-- Active Blocked IPs / Total Blocked IP Records
-- Biểu đồ Request theo giờ + phân bố Action
-- Top IP / Top Route
-
-> 🖼️ **Dashboard khi ML Detector Online:**
->
-> ![Dashboard Online](docs/images/api_gateway_02_dashboard_online.png)
-
-> 🖼️ **Dashboard khi ML Detector Offline — website vẫn hoạt động, chỉ báo lỗi kết nối:**
->
-> ![Dashboard Offline](docs/images/api_gateway_03_dashboard_offline.png)
-
-### 🧪 Test phòng thủ — Spam 80 request
-
-```powershell
-for ($i = 1; $i -le 80; $i++) {
-    $code = curl.exe -k -s -o NUL -w "%{http_code}" https://localhost:44350/Home/Index
-    Write-Host "$i => $code"
-}
+```text
+RandomForest + ExtraTrees + LightGBM + XGBoost
+Meta model: LogisticRegression_pure_stacking
 ```
 
-| Giai đoạn | HTTP Code | Ý nghĩa |
-|---|---:|---|
-| Request bình thường (1-25) | `200` | Cho phép truy cập |
-| Spam vượt ngưỡng (26-34) | `429` | Rate Limit |
-| Tiếp tục spam (35-80) | `403` | Temporary Block IP |
+## 📊 Dashboard API Gateway
 
-> 🖼️ **Kết quả test 80 request: 200 → 429 → 403:**
+Truy cập:
+
+```text
+/Admin/ApiGatewayDashboard
+```
+
+Dashboard hiển thị:
+
+- Tổng log, log trong ngày, log 24h, average risk.
+- ML detector online/offline.
+- Model type hiện tại.
+- Feature count.
+- Allow / Monitor / Rate Limited / Block Logs.
+- Active Blocked IPs.
+- Biểu đồ request theo giờ.
+- Action distribution.
+
+> 🖼️ **Dashboard khi model mới 5011 đang active:**
 >
-> ![Rate Limit Block Test](docs/images/api_gateway_04_rate_limit_block_test.png)
+> ![Dashboard New 5011](docs/images/api_upgrade_03_dashboard_new_5011.png)
 
-### 📋 API Gateway Logs
+## 🧪 Trang so sánh API Gateway Model
 
-Truy cập `/Admin/ApiGatewayLogs` — lọc theo IP, Final Action, Predicted Label, Decision Source, khoảng thời gian.
+Truy cập:
 
-**Cột chính:** IP, Route, Risk Score, Predicted Label, Final Action, Decision Source, Request Rate/min, Sequence Length, Graph Self Loops, Created At
+```text
+/Admin/ApiGatewayModelComparison
+```
 
-**Action:** `allow` / `monitor` / `challenge_or_rate_limit` / `block`
+Trang này so sánh `Old 5001 — RandomForest binary` với `New 5011 — Stacking Ensemble` bằng endpoint **ML-only**, không lấy `action production`, để tránh rule engine làm sai kết quả so sánh.
 
-**Decision Source:** `normal` / `cold_start_allow` / `ml_monitor` / `ml_high_risk_monitor` / `rule_rate_limit` / `temporary_ip_block_created` / `temporary_ip_block`
-
-> 🖼️ **API Gateway Logs — có chức năng Log Maintenance (xóa log cũ/toàn bộ) và bộ lọc đầy đủ:**
+> 🖼️ **Trang API Gateway Model Comparison:**
 >
-> ![API Gateway Logs](docs/images/api_gateway_05_logs.png)
+> ![API Gateway Model Comparison](docs/images/api_upgrade_04_model_comparison_page.png)
 
-### 🚫 Temporary Blocked IPs
-
-Khi IP bị rate-limit nhiều lần trong thời gian ngắn, hệ thống tự động khóa tạm thời. Truy cập `/Admin/BlockedIps`.
-
-**Thông tin lưu lại:** IP Address, Status, Source, Challenge Count, Blocked Requests, Created At, Blocked Until, Reason. Admin có thể bấm **Unblock** để mở khóa thủ công.
-
-> 🖼️ **IP đang bị khóa tạm thời (status Active):**
+> 🖼️ **Kết quả so sánh 5001 và 5011:**
 >
+> ![API Gateway Comparison Results](docs/images/api_upgrade_05_comparison_results.png)
+
+Kết quả thực nghiệm từ các bộ test mở rộng:
+
+| Bộ test | Old 5001 | New 5011 |
+|---|---:|---:|
+| 24 kịch bản | 22/24 | 23/24 |
+| 30 kịch bản | 28/30 | 29/30 |
+| 52 kịch bản tổng hợp | 48/52 | 50/52 |
+
+Nhận xét:
+
+- 5011 giảm risk score với traffic bình thường.
+- 5011 tăng risk score với nhiều traffic bất thường.
+- 5011 phát hiện đúng một số case mà 5001 bỏ sót, ví dụ distributed bot nhiều session ít user.
+- 5011 chậm hơn do phải chạy nhiều base model và meta model.
+
+## 📋 API Gateway Logs
+
+Truy cập:
+
+```text
+/Admin/ApiGatewayLogs
+```
+
+Logs hiển thị `DecisionSource`, ví dụ:
+
+```text
+new_5011_normal
+new_5011_cold_start_allow
+new_5011_ml_high_risk_monitor
+fallback_5001_normal
+fallback_5001_ml_monitor
+```
+
+> 🖼️ **API Gateway Logs ghi nhận request được xử lý bởi 5011:**
+>
+> ![API Gateway Logs New 5011](docs/images/api_upgrade_06_logs_new_5011.png)
+
+## 🔁 Fallback API Gateway
+
+Khi `5011` tắt nhưng `5001` vẫn chạy, dashboard hiển thị model fallback:
+
+```text
+random_forest_binary (fallback_5001)
+```
+
+> 🖼️ **Dashboard khi fallback sang model cũ 5001:**
+>
+> ![API Gateway Fallback 5001](docs/images/api_upgrade_07_fallback_5001.png)
+
+Khi cả `5011` và `5001` đều tắt, website vẫn load được. Dashboard báo Offline nhưng không làm sập hệ thống.
+
+> 🖼️ **Cả 5011 và 5001 offline nhưng website vẫn hoạt động:**
+>
+> ![API Gateway All ML Down](docs/images/api_fallback_03_all_ml_down_web_still_load.png)
+
+## 🚫 Temporary Blocked IPs
+
+API Gateway vẫn giữ chức năng rate-limit và temporary block:
+
+```text
+normal request → allow
+spam request → challenge_or_rate_limit 429
+tiếp tục spam → block 403 + temporary blocked IP
+```
+
+Ảnh cũ vẫn dùng được:
+
 > ![Blocked IPs Active](docs/images/api_gateway_06_blocked_ips_active.png)
 
-> 🖼️ **Admin xác nhận Unblock IP:**
->
-> ![Unblock Confirm](docs/images/api_gateway_07_unblock_success.png)
+## 📲 Telegram Alert
 
-> 🖼️ **Sau khi Unblock — danh sách trống:**
->
-> ![Unblock Success](docs/images/api_gateway_07_unblock_success01.png)
+Khi tạo temporary block mới, Telegram gửi cảnh báo realtime kèm nút mở:
 
-### 📲 Telegram Alert
+- Blocked IPs.
+- API Gateway Dashboard.
 
-Khi hệ thống tạo temporary block mới, Telegram Bot gửi cảnh báo realtime gồm: IP bị khóa, Route bị spam, Decision Source, Risk Score, Request Rate, Sequence Length, Graph Self Loops, Challenge Count, Blocked Until, Created At.
+Ảnh cũ vẫn dùng được:
 
-> ℹ️ Khác với Module 1 (dùng webhook callback để Whitelist), API Gateway Telegram Alert chỉ dùng **URL button** để mở Admin Dashboard / Blocked IPs qua ngrok — không xử lý callback từ Telegram.
-
-Nếu cấu hình `PublicBaseUrl` bằng ngrok, Telegram hiển thị thêm 2 nút: **Open Blocked IPs** và **Open API Gateway Dashboard**.
-
-> 🖼️ **Telegram alert khi API Gateway tạo Temporary Block — có nút mở Dashboard:**
->
 > ![Telegram Alert API Gateway](docs/images/api_gateway_08_telegram_alert_buttons.png)
 
-### 📤 Export CSV
-
-Trang Logs có nút **Export CSV** xuất các cột: `Id, IpAddress, Controller, ActionName, RiskScore, PredictedLabel, FinalAction, DecisionSource, RequestRatePerMin, SequenceLength, GraphSelfLoops, CreatedAt`
-
-> 🖼️ **File CSV xuất ra từ API Gateway Logs:**
->
-> ![CSV Export](docs/images/api_gateway_09_csv_export.png)
-
-### 🌐 Ngrok Public URL
-
-```cmd
-ngrok http --host-header=rewrite https://localhost:44350
-```
-
-```xml
-<add key="PublicBaseUrl" value="https://your-ngrok-url.ngrok-free.dev" />
-```
-
-> 🖼️ **ngrok tunnel active — SQL Injection dùng webhook callback, API Gateway dùng URL button mở Dashboard/Blocked IPs (302/200 OK):**
->
-> ![ngrok Public URL](docs/images/api_gateway_10_ngrok_public_url.png)
-
-### 🧪 Kịch bản demo
-
-| Bước | Thao tác | Kết quả |
-|---|---|---|
-| 1 | Chạy Flask API Gateway Detector | Model Online |
-| 2 | Mở Admin Dashboard | Hiển thị ML Detector Online |
-| 3 | Chạy 80 request bằng PowerShell | 200 → 429 → 403 |
-| 4 | Mở API Gateway Logs | Thấy allow/rate-limit/block |
-| 5 | Mở Blocked IPs | Thấy IP đang Active |
-| 6 | Kiểm tra Telegram | Nhận alert có nút mở dashboard |
-| 7 | Bấm Unblock | IP được mở khóa |
-| 8 | Tắt Flask | Dashboard báo Offline nhưng web không crash |
-
-### ✅ Kết quả đạt được
-
-```
-✅ Phát hiện request bất thường bằng ML
-✅ Giám sát request theo IP và session
-✅ Chống spam/flood request
-✅ Rate limit bằng HTTP 429
-✅ Khóa IP tạm thời bằng HTTP 403
-✅ Ghi log vào database
-✅ Dashboard thống kê realtime
-✅ Quản lý Blocked IPs
-✅ Export CSV
-✅ ML health check Online/Offline
-✅ Telegram alert realtime
-✅ Hỗ trợ ngrok để mở dashboard từ Telegram
-```
-
-### ⚠️ Giới hạn hiện tại
-
-Module tập trung chống: request flood, spam cùng route, request rate bất thường, hành vi truy cập lặp lại theo IP/session.
-
-Chưa thay thế API Security chuyên sâu: Broken Authentication, Broken Authorization/IDOR, JWT abuse, SSRF, File upload attack, Business logic abuse.
-
-Với mục tiêu **nghiên cứu bảo vệ API Gateway bằng Machine Learning**, module hiện tại đã đáp ứng: phát hiện, rate-limit, temporary block, logging, monitoring và realtime alert.
-
----
 ---
 
 ## 🛠️ Khắc phục lỗi chung
 
 <details>
-<summary><b>❌ Lỗi: <code>No module named flask</code> / xgboost / sklearn...</b></summary>
+<summary><b>❌ Lỗi: No module named flask / xgboost / lightgbm / sklearn</b></summary>
 
-Chạy lại trong môi trường ảo đã activate:
+Chạy:
+
 ```cmd
-pip install flask pandas scikit-learn xgboost joblib numpy
+pip install flask pandas scikit-learn xgboost lightgbm joblib numpy
 ```
+
 </details>
 
 <details>
-<summary><b>❌ Lỗi: Không tìm thấy file <code>.pkl</code></b></summary>
+<summary><b>❌ Lỗi: Không tìm thấy file .pkl</b></summary>
 
-Kiểm tra các file `.pkl` đang nằm đúng thư mục `models/` của từng Flask service:
-```
-sql_injection_ml\models\sql_injection_xgboost_model.pkl
-sql_injection_ml\models\tfidf_vectorizer.pkl
+Kiểm tra thư mục model:
 
-api_gateway_ml\models\api_gateway_model.pkl
-api_gateway_ml\models\api_gateway_features.pkl
-api_gateway_ml\models\api_gateway_labels.pkl
-api_gateway_ml\models\api_gateway_model_type.pkl
+```text
+sql_injection_ml/models/
+api_gateway_ml/models/
 ```
+
+Đảm bảo model, vectorizer, scaler, metadata nằm đúng vị trí.
+
 </details>
 
 <details>
-<summary><b>❌ Lỗi: Website load mãi không ra (ML timeout)</b></summary>
+<summary><b>❌ Website vẫn load nhưng Dashboard báo ML Offline</b></summary>
 
-Đảm bảo **cả 2 Flask** đang chạy trước khi mở website:
+Đây là hành vi đúng nếu Flask service chưa chạy hoặc bị tắt. Hệ thống được thiết kế fail-safe:
+
+```text
+5010 lỗi → fallback 5000
+5011 lỗi → fallback 5001
+cả hai API Gateway ML lỗi → web vẫn load, dashboard báo Offline
 ```
-🚀 SQL Injection Detection API đang chạy tại http://localhost:5000
-🚀 API Gateway ML Detector đang chạy tại http://localhost:5001
-```
-Nếu một trong hai Flask không chạy, hệ thống vẫn hoạt động (fallback cho qua/allow), dashboard tương ứng sẽ báo **Offline**.
+
 </details>
 
 <details>
-<summary><b>❌ Lỗi: Telegram không nhận tin nhắn</b></summary>
+<summary><b>❌ API Gateway tự chặn trang quản trị bảo mật</b></summary>
 
-1. Kiểm tra bot token: `https://api.telegram.org/bot<TOKEN>/getMe` phải trả về `{"ok": true, ...}`
-2. Xem **Output window** (Ctrl+Alt+O) trong Visual Studio, tìm dòng `[Telegram]`.
-3. `TaskCanceledException` nghĩa là Flask timeout.
+Cần skip các route nội bộ trong `ApiGatewayMlFilter`, ví dụ:
+
+```text
+ApiGatewayDashboard
+ApiGatewayLogs
+BlockedIps
+ApiGatewayModelComparison
+SqlInjectionLog
+Account
+```
+
+Nếu không skip, các trang dashboard/log/polling có thể tạo request lặp và gây false positive.
+
 </details>
 
 <details>
-<summary><b>❌ Lỗi: Nút Telegram bấm không có tác dụng</b></summary>
+<summary><b>❌ Nút Telegram không hoạt động</b></summary>
 
-Webhook chưa đăng ký hoặc ngrok đã đổi URL:
-```
-https://api.telegram.org/bot<TOKEN>/getWebhookInfo
-```
-Nếu `url` trống/sai → đăng ký lại webhook + cập nhật `PublicBaseUrl` trong `Web.config`.
-</details>
+Kiểm tra:
 
-<details>
-<summary><b>❌ Lỗi: <code>Bad Request - Invalid Hostname</code> khi qua ngrok</b></summary>
+```text
+PublicBaseUrl
+ngrok URL
+Telegram webhook
+BotToken
+ChatId
+```
 
-Dùng `--host-header=rewrite`:
-```cmd
-ngrok http --host-header=rewrite https://localhost:44350
-```
-Hoặc thêm binding trong `applicationhost.config`:
-```xml
-<binding protocol="https" bindingInformation="*:44350:" />
-```
+Nếu ngrok đổi URL, phải cập nhật `PublicBaseUrl` và đăng ký lại webhook.
+
 </details>
 
 ---
@@ -851,23 +722,45 @@ Hoặc thêm binding trong `applicationhost.config`:
 
 | | Module 1 — SQL Injection | Module 2 — API Gateway Security |
 |---|---|---|
-| Accuracy | 99.69% (XGBoost) | Random Forest binary classifier |
-| Phát hiện | Payload SQLi (Union, Time-based, Obfuscated...) | Spam/Flood/Bot theo hành vi truy cập |
-| Hành động | Block 403 + Telegram Whitelist Review | 429 Rate Limit → 403 Temporary Block |
-| Giám sát | Dashboard `/SQLInjectionLog` | Dashboard + Logs + Blocked IPs (Admin Area) |
-| Cảnh báo | Telegram (payload + Whitelist/Bỏ qua) | Telegram (Temporary Block + link Dashboard) |
-| Fail-safe | Cho qua nếu Flask :5000 offline | Allow + Dashboard báo Offline nếu Flask :5001 offline |
+| Model chính | Stacking Ensemble `:5010` | Stacking Ensemble `:5011` |
+| Model fallback | XGBoost `:5000` | RandomForest binary `:5001` |
+| Kiểu phát hiện | Payload SQL Injection | Hành vi truy cập API |
+| So sánh model | `/Admin/SqlInjectionModelComparison` | `/Admin/ApiGatewayModelComparison` |
+| Action | Block 403 + Telegram Review | Monitor / 429 Rate Limit / 403 Temporary Block |
+| Logging | `SQLInjectionLogs` | `ApiGatewayLogs`, `BlockedIps` |
+| Dashboard | SQL Injection Log / Comparison | Dashboard / Logs / Blocked IPs / Comparison |
+| Fail-safe | 5010 lỗi → 5000 fallback | 5011 lỗi → 5001 fallback; cả hai lỗi → web vẫn load |
 
-Hai module hoạt động **độc lập, không phụ thuộc lẫn nhau** — đảm bảo nếu một lớp gặp sự cố, website vẫn hoạt động bình thường và lớp còn lại tiếp tục bảo vệ hệ thống.
+Hai module hoạt động **độc lập**. Nếu một lớp hoặc một Flask API gặp sự cố, website vẫn hoạt động bình thường và lớp còn lại tiếp tục bảo vệ hệ thống.
+
+---
+
+## ✅ Kết luận
+
+Dự án đã hoàn thiện hai nâng cấp chính:
+
+```text
+SQL Injection:
+XGBoost 5000 → Stacking Ensemble 5010
+Giữ XGBoost 5000 làm fallback
+
+API Gateway:
+RandomForest 5001 → Stacking Ensemble 5011
+Giữ RandomForest 5001 làm fallback
+```
+
+Mô hình mới cho khả năng phát hiện tốt hơn trong các bộ test mở rộng, đặc biệt với các hành vi bất thường tinh vi. Tuy nhiên, hệ thống vẫn giữ model cũ làm fallback để đảm bảo tính ổn định và khả năng phục hồi khi model mới tắt hoặc lỗi.
 
 ---
 
 ## 🤝 Đóng góp
 
-Nếu gặp lỗi hoặc muốn cải thiện, hãy mở [Issue](https://github.com/sangtran121/eparty-security-ml/issues) kèm:
-- Ảnh chụp màn hình lỗi (ghi rõ Module 1 hay Module 2)
-- Payload / request gây ra vấn đề
-- Dòng log trong Output window của Visual Studio hoặc console Flask
+Nếu gặp lỗi hoặc muốn cải thiện, hãy mở Issue kèm:
+
+- Ảnh chụp màn hình lỗi.
+- Payload / request gây lỗi.
+- Dòng log trong Flask console hoặc Output window của Visual Studio.
+- Ghi rõ lỗi thuộc SQL Injection, API Gateway, Telegram hay Dashboard.
 
 ---
 
