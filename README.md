@@ -1,120 +1,201 @@
 # 🛡️ eParty — Hệ thống bảo mật đa lớp với Machine Learning
 
-Website quản lý dịch vụ tiệc cưới **eParty** (ASP.NET MVC) được tích hợp **2 lớp phòng thủ độc lập**, mỗi lớp có mô hình Machine Learning riêng để phát hiện và ngăn chặn tấn công theo thời gian thực. Phiên bản hiện tại đã được nâng cấp từ mô hình đơn sang **Stacking Ensemble**, đồng thời vẫn giữ mô hình cũ làm **fallback** để hệ thống không bị gián đoạn khi model mới tắt hoặc lỗi.
+Website quản lý dịch vụ tiệc cưới **eParty** (ASP.NET MVC / .NET Framework 4.8) được tích hợp **2 lớp phòng thủ độc lập** để phát hiện và giảm thiểu tấn công theo thời gian thực:
+
+- **Module 1 — SQL Injection Detection:** bảo vệ nội dung payload, form, query string bằng Rule Engine + ML.
+- **Module 2 — API Gateway Security:** bảo vệ hành vi truy cập theo IP/session/rate/graph bằng ML + Rule Engine + Temporary Block.
+
+Phiên bản hiện tại đã được nâng cấp từ mô hình đơn lẻ sang **Stacking Ensemble** ở cả 2 module, đồng thời vẫn giữ model cũ làm **fallback** để website không bị phụ thuộc vào một Flask service duy nhất.
 
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
-[![Flask](https://img.shields.io/badge/Flask-API-000000?style=for-the-badge&logo=flask&logoColor=white)](https://flask.palletsprojects.com)
+[![Flask](https://img.shields.io/badge/Flask-ML%20API-000000?style=for-the-badge&logo=flask&logoColor=white)](https://flask.palletsprojects.com)
 [![ASP.NET](https://img.shields.io/badge/ASP.NET-MVC%204.8-512BD4?style=for-the-badge&logo=dotnet&logoColor=white)](https://dotnet.microsoft.com)
-[![XGBoost](https://img.shields.io/badge/XGBoost-Base%20Model-FF6600?style=for-the-badge)](https://xgboost.readthedocs.io)
-[![LightGBM](https://img.shields.io/badge/LightGBM-Base%20Model-9ACD32?style=for-the-badge)](https://lightgbm.readthedocs.io)
-[![Stacking](https://img.shields.io/badge/Stacking-Ensemble-6A5ACD?style=for-the-badge)](https://scikit-learn.org)
+[![XGBoost](https://img.shields.io/badge/XGBoost-Baseline%2FBase%20Model-FF6600?style=for-the-badge)](https://xgboost.readthedocs.io)
+[![RandomForest](https://img.shields.io/badge/RandomForest-Baseline%2FBase%20Model-2E8B57?style=for-the-badge)](https://scikit-learn.org)
+[![Stacking](https://img.shields.io/badge/Stacking-Ensemble%20Upgrade-7B61FF?style=for-the-badge)](https://scikit-learn.org)
 [![Telegram](https://img.shields.io/badge/Telegram-Bot%20Alert-26A5E4?style=for-the-badge&logo=telegram&logoColor=white)](https://core.telegram.org/bots)
 
 <div align="center">
-  <img src="docs/images/01_homepage.png" alt="eParty Homepage" width="800"/>
-  <p><em>Website quản lý dịch vụ tiệc cưới eParty — PartyServ</em></p>
+  <img src="docs/images/01_homepage.png" alt="eParty Homepage" width="850"/>
+  <p><em>eParty — Website quản lý dịch vụ tiệc cưới tích hợp bảo mật đa lớp bằng Machine Learning</em></p>
 </div>
 
 ---
 
 ## 📑 Mục lục
 
-- [Tổng quan kiến trúc bảo mật](#️-tổng-quan-kiến-trúc-bảo-mật)
-- [Điểm nâng cấp chính](#-điểm-nâng-cấp-chính)
+- [Điểm mới của phiên bản nâng cấp](#-điểm-mới-của-phiên-bản-nâng-cấp)
+- [Tổng quan kiến trúc bảo mật](#-tổng-quan-kiến-trúc-bảo-mật)
 - [Yêu cầu hệ thống](#️-yêu-cầu-hệ-thống)
 - [Cấu trúc thư mục](#-cấu-trúc-thư-mục)
 - [Hướng dẫn cài đặt](#-hướng-dẫn-cài-đặt)
 - [Chạy toàn bộ hệ thống](#️-chạy-toàn-bộ-hệ-thống)
-- [MODULE 1 — SQL Injection Detection](#️-module-1--sql-injection-detection)
-- [MODULE 2 — API Gateway Security](#️-module-2--api-gateway-security)
+- [Module 1 — SQL Injection Detection](#️-module-1--sql-injection-detection)
+- [Module 2 — API Gateway Security](#️-module-2--api-gateway-security)
+- [Kết quả thực nghiệm nâng cấp](#-kết-quả-thực-nghiệm-nâng-cấp)
 - [Khắc phục lỗi chung](#️-khắc-phục-lỗi-chung)
 - [Kết quả tổng thể](#-kết-quả-tổng-thể)
 - [Đóng góp](#-đóng-góp)
 
 ---
 
-## 🏗️ Tổng quan kiến trúc bảo mật
+## 🆕 Điểm mới của phiên bản nâng cấp
 
-Mọi request gửi đến eParty đi qua **2 lớp phòng thủ độc lập**. Mỗi lớp có model chính mới, model cũ làm fallback, rule engine, logging và dashboard riêng.
+README cũ mô tả hệ thống với 2 model chính:
 
-```text
-                        Client Request
-                              │
-                              ▼
-        ┌─────────────────────────────────────────────┐
-        │   LỚP 1 — SqlInjectionFilter                │
-        │   Rule-based + ML SQL Injection Detection   │
-        │                                             │
-        │   Primary :5010 — Stacking Ensemble          │
-        │   Fallback :5000 — XGBoost                  │
-        │   → Phát hiện SQL Injection trong payload    │
-        └───────────────────┬───────────────────────────┘
-                              │ an toàn
-                              ▼
-        ┌─────────────────────────────────────────────┐
-        │   LỚP 2 — ApiGatewayMlFilter                │
-        │   Realtime Behavior + API Gateway ML        │
-        │                                             │
-        │   Primary :5011 — Stacking Ensemble          │
-        │   Fallback :5001 — RandomForest binary       │
-        │   → Phát hiện spam/flood/bot theo hành vi    │
-        └───────────────────┬───────────────────────────┘
-                              │ allow
-                              ▼
-                    Controller xử lý ✅
-```
+- SQL Injection: **XGBoost :5000**
+- API Gateway: **RandomForest binary :5001**
 
-| | Module 1 — SQL Injection | Module 2 — API Gateway Security |
-|---|---|---|
-| **Bảo vệ** | Nội dung payload, form, query string | Hành vi truy cập, rate, session, graph API |
-| **Model chính** | Stacking Ensemble `:5010` | Stacking Ensemble `:5011` |
-| **Model fallback** | XGBoost `:5000` | RandomForest binary `:5001` |
-| **So sánh model** | `/Admin/SqlInjectionModelComparison` | `/Admin/ApiGatewayModelComparison` |
-| **Action** | allow / block 403 | allow / monitor / rate-limit 429 / block 403 |
-| **Admin Review** | Telegram Whitelist / Bỏ qua | Telegram Temporary Block alert |
-| **Fail-safe** | 5010 lỗi → fallback 5000; cả hai lỗi → cho qua | 5011 lỗi → fallback 5001; cả hai lỗi → web vẫn load |
+Phiên bản hiện tại đã nâng cấp thành:
+
+| Module | Model cũ | Model mới | Cách dùng hiện tại |
+|---|---|---|---|
+| SQL Injection | `5000` — XGBoost + TF-IDF | `5010` — Stacking Ensemble | `5010` làm model chính, `5000` làm fallback |
+| API Gateway | `5001` — RandomForest binary | `5011` — Stacking Ensemble | `5011` làm model chính, `5001` làm fallback |
+| Fail-safe | Nếu model lỗi thì cho qua | Nếu model mới lỗi thì fallback model cũ | Nếu cả hai model lỗi, website vẫn load và ghi offline |
+
+### Ảnh minh chứng nâng cấp SQL Injection
+
+<div align="center">
+  <img src="docs/images/sql_upgrade_01_flask_5010_stacking.png" alt="SQL Injection Stacking 5010 Running" width="850"/>
+  <p><em>Model SQL Injection mới — Stacking Ensemble chạy tại port 5010</em></p>
+</div>
+
+<div align="center">
+  <img src="docs/images/sql_upgrade_02_flask_5000_fallback.png" alt="SQL Injection XGBoost 5000 Fallback Running" width="850"/>
+  <p><em>Model SQL Injection cũ — XGBoost chạy tại port 5000 để fallback</em></p>
+</div>
+
+<div align="center">
+  <img src="docs/images/sql_upgrade_03_model_comparison.png" alt="SQL Injection Model Comparison Page" width="850"/>
+  <p><em>Trang so sánh SQL Injection: XGBoost :5000 vs Stacking :5010</em></p>
+</div>
+
+<div align="center">
+  <img src="docs/images/sql_upgrade_04_comparison_results.png" alt="SQL Injection Comparison Results" width="850"/>
+  <p><em>Kết quả so sánh nhiều payload SQL Injection giữa model cũ và model mới</em></p>
+</div>
+
+<div align="center">
+  <img src="docs/images/sql_upgrade_05_blocked_detectedby.png" alt="SQL Injection Blocked Detected By Stacking" width="650"/>
+  <p><em>Trang bị chặn hiển thị rõ nguồn phát hiện: ML Stacking_5010</em></p>
+</div>
+
+<div align="center">
+  <img src="docs/images/sql_fallback_02_5000_fallback.png" alt="SQL Injection 5000 Fallback" width="650"/>
+  <p><em>Khi model mới 5010 không dùng được, hệ thống fallback sang XGBoost 5000</em></p>
+</div>
+
+### Ảnh minh chứng nâng cấp API Gateway
+
+<div align="center">
+  <img src="docs/images/api_upgrade_01_flask_5011_stacking.png" alt="API Gateway Stacking 5011 Running" width="850"/>
+  <p><em>Model API Gateway mới — Stacking Ensemble chạy tại port 5011</em></p>
+</div>
+
+<div align="center">
+  <img src="docs/images/api_upgrade_02_flask_5001_fallback.png" alt="API Gateway 5001 Fallback Running" width="850"/>
+  <p><em>Model API Gateway cũ — RandomForest binary chạy tại port 5001 để fallback</em></p>
+</div>
+
+<div align="center">
+  <img src="docs/images/api_upgrade_03_dashboard_new_5011.png" alt="API Gateway Dashboard New 5011" width="850"/>
+  <p><em>Dashboard nhận đúng model mới: stacking_ensemble_5011 (new_5011)</em></p>
+</div>
+
+<div align="center">
+  <img src="docs/images/api_upgrade_04_model_comparison_page.png" alt="API Gateway Model Comparison Page" width="850"/>
+  <p><em>Trang API Gateway Model Comparison: 5001 baseline vs 5011 Stacking</em></p>
+</div>
+
+<div align="center">
+  <img src="docs/images/api_upgrade_05_comparison_results.png" alt="API Gateway Comparison Results" width="850"/>
+  <p><em>So sánh ML-only giữa Old 5001 và New 5011 Stacking Ensemble</em></p>
+</div>
+
+<div align="center">
+  <img src="docs/images/api_upgrade_06_logs_new_5011.png" alt="API Gateway Logs New 5011" width="850"/>
+  <p><em>API Gateway Logs ghi rõ nguồn quyết định new_5011_...</em></p>
+</div>
+
+<div align="center">
+  <img src="docs/images/api_upgrade_07_fallback_5001.png" alt="API Gateway 5001 Fallback Dashboard" width="850"/>
+  <p><em>Khi 5011 tắt, Dashboard fallback sang random_forest_binary (fallback_5001)</em></p>
+</div>
+
+<div align="center">
+  <img src="docs/images/api_fallback_03_all_ml_down_web_still_load.png" alt="API Gateway All ML Down Web Still Load" width="850"/>
+  <p><em>Khi cả 5011 và 5001 đều tắt, Dashboard báo Offline nhưng website vẫn hoạt động</em></p>
+</div>
 
 ---
 
-## ✨ Điểm nâng cấp chính
+## 🏗️ Tổng quan kiến trúc bảo mật
 
-### ✅ Nâng cấp SQL Injection
+Mọi request gửi đến eParty đi qua 2 lớp bảo vệ độc lập.
 
-- Thêm model mới **Stacking Ensemble** chạy tại port `5010`.
-- Giữ model cũ **XGBoost** tại port `5000` làm fallback.
-- `SqlInjectionFilter` ưu tiên gọi `5010`, nếu lỗi thì tự fallback về `5000`.
-- Trang blocked page hiển thị rõ nguồn phát hiện: `ML Stacking_5010` hoặc `ML XGBoost_5000_Fallback`.
-- Thêm trang so sánh model: `/Admin/SqlInjectionModelComparison`.
+```text
+Client Request
+      │
+      ▼
+┌───────────────────────────────────────────────────────────────┐
+│ LỚP 1 — SQL Injection Detection                               │
+│ SqlInjectionFilter                                             │
+│ Rule-based raw/normalized                                     │
+│ Primary ML  : Stacking Ensemble Flask :5010 /predict           │
+│ Fallback ML : XGBoost Flask :5000 /predict                     │
+│ Admin Review: Telegram whitelist / bỏ qua                      │
+└───────────────────────────────┬───────────────────────────────┘
+                                │ nếu an toàn
+                                ▼
+┌───────────────────────────────────────────────────────────────┐
+│ LỚP 2 — API Gateway Security                                  │
+│ ApiGatewayMlFilter                                             │
+│ Realtime behavior feature extraction                           │
+│ Primary ML  : Stacking Ensemble Flask :5011 /predict-api-gateway│
+│ Fallback ML : RandomForest Flask :5001 /predict-api-gateway    │
+│ Rule Engine + Temporary Blocked IP + Telegram Alert            │
+└───────────────────────────────┬───────────────────────────────┘
+                                │ allow
+                                ▼
+                       Controller xử lý request
+```
 
-### ✅ Nâng cấp API Gateway
+### Bảng tổng quan module
 
-- Thêm model mới **Stacking Ensemble 5011** gồm:
-  - `RandomForest`
-  - `ExtraTrees`
-  - `LightGBM`
-  - `XGBoost`
-  - Meta model: `LogisticRegression_pure_stacking`
-- Giữ model cũ **RandomForest binary 5001** làm fallback.
-- `ApiGatewayMlService` ưu tiên gọi `5011`, nếu lỗi thì fallback sang `5001`.
-- Thêm endpoint ML-only cho so sánh công bằng:
-  - `5001/predict-api-gateway-ml-only`
-  - `5011/predict-api-gateway-ml-only`
-- Thêm trang so sánh: `/Admin/ApiGatewayModelComparison`.
-- Dashboard hiển thị model đang dùng: `stacking_ensemble_5011 (new_5011)` hoặc `random_forest_binary (fallback_5001)`.
+| | Module 1 — SQL Injection | Module 2 — API Gateway Security |
+|---|---|---|
+| **Bảo vệ** | Nội dung payload, query string, form body | Hành vi truy cập theo IP/session/rate/graph |
+| **Model chính** | `5010` — Stacking Ensemble | `5011` — Stacking Ensemble |
+| **Model fallback** | `5000` — XGBoost + TF-IDF | `5001` — RandomForest binary |
+| **Endpoint chính** | `POST /predict` | `POST /predict-api-gateway` |
+| **Endpoint so sánh** | `/Admin/SqlInjectionModelComparison` | `/Admin/ApiGatewayModelComparison` |
+| **Action** | allow / block 403 | allow / monitor / challenge_or_rate_limit / block |
+| **Admin Review** | Telegram Whitelist / Bỏ qua | Telegram Temporary Block alert |
+| **Fail-safe** | 5010 lỗi → 5000 fallback → allow nếu cả hai lỗi | 5011 lỗi → 5001 fallback → allow/offline nếu cả hai lỗi |
 
 ---
 
 ## ⚙️ Yêu cầu hệ thống
 
 | Thành phần | Yêu cầu |
-|-----------|---------|
+|---|---|
 | Hệ điều hành | Windows 10 / Windows 11 |
 | IDE | Visual Studio 2022 |
 | Framework | .NET Framework 4.8 |
-| Python | Python 3.10+ *(đã test với Python 3.14 trên Windows)* |
-| RAM | Tối thiểu 8GB, khuyến nghị 16GB+ |
-| Telegram | Bot token + Chat ID |
-| ngrok | Tùy chọn, dùng cho Telegram button / webhook |
+| Python | 3.10 trở lên; đã test với Python 3.14 trên Windows |
+| RAM | Tối thiểu 8GB, khuyến nghị 16GB trở lên |
+| Database | SQL Server / LocalDB |
+| Telegram | Bot Token + Chat ID |
+| ngrok | Tùy chọn nếu muốn dùng Telegram webhook hoặc mở dashboard qua điện thoại |
+
+### Python packages
+
+```cmd
+pip install flask pandas scikit-learn xgboost lightgbm joblib numpy matplotlib
+```
+
+> `lightgbm` dùng cho API Gateway Stacking 5011. Nếu chưa cài, script train có thể dùng fallback khác, nhưng bản demo hiện tại đã dùng LightGBM trong Stacking.
 
 ---
 
@@ -122,13 +203,14 @@ Mọi request gửi đến eParty đi qua **2 lớp phòng thủ độc lập**.
 
 ```text
 Repository root/
-├── eParty/                           ← ASP.NET MVC web project
-├── sql_injection_ml/                 ← Flask ML Module 1
-├── api_gateway_ml/                   ← Flask ML Module 2
-└── docs/images/                      ← Ảnh minh họa README
+├── eParty/                         # ASP.NET MVC web project
+├── sql_injection_ml/               # Module SQL Injection Flask APIs
+├── api_gateway_ml/                 # Module API Gateway Flask APIs
+├── docs/images/                    # Ảnh minh họa README
+└── README.md
 ```
 
-### Web project `eParty/`
+### eParty — phần web
 
 ```text
 eParty/
@@ -176,105 +258,123 @@ eParty/
 │   ├── ApiGatewayTelegramAlertService.cs
 │   └── BlockedIpService.cs
 │
-└── Views/Shared/SQLInjectionBlocked.cshtml
+└── Views/Shared/
+    └── SQLInjectionBlocked.cshtml
 ```
 
-### Python services
+### sql_injection_ml
 
 ```text
 sql_injection_ml/
-├── app.py                              ← XGBoost fallback API :5000
-├── sql_injection_stacking_api.py       ← Stacking primary API :5010
+├── app.py                         # Flask API cũ — XGBoost fallback :5000
+├── sql_injection_detection.py     # Train XGBoost cũ
+├── sql_injection_stacking_api.py  # Flask API mới — Stacking primary :5010
+├── train_sql_injection_stacking.py# Train Stacking mới
 ├── Modified_SQL_Dataset.csv
 └── models/
     ├── sql_injection_xgboost_model.pkl
     ├── tfidf_vectorizer.pkl
     ├── sql_injection_stacking_model.pkl
     └── tfidf_vectorizer_stacking.pkl
+```
 
+### api_gateway_ml
+
+```text
 api_gateway_ml/
-├── api_gateway_detector.py             ← RandomForest fallback API :5001
-├── api_gateway_stacking_api_5011_v2.py  ← Stacking primary API :5011
-├── train_api_gateway_model.py
-├── train_api_gateway_stacking_5011_v2.py
+├── api_gateway_detector.py              # Flask API cũ — RandomForest fallback :5001
+├── train_api_gateway_model.py           # Train baseline v6
+├── api_gateway_stacking_api_5011_v2.py  # Flask API mới — Stacking primary :5011
+├── train_api_gateway_stacking_5011_v2.py# Train Stacking 5011
+├── data/
+│   ├── supervised_dataset.csv
+│   ├── remaining_behavior_ext.csv
+│   ├── supervised_call_graphs.json
+│   └── remaining_call_graphs.json
 └── models/
     ├── api_gateway_model.pkl
     ├── api_gateway_features.pkl
     ├── api_gateway_labels.pkl
     ├── api_gateway_model_type.pkl
-    ├── api_gateway_stacking_model_5011.pkl
-    ├── api_gateway_stacking_scaler_5011.pkl
-    └── api_gateway_stacking_metadata_5011.pkl
+    ├── api_gateway_stacking_model.pkl
+    ├── api_gateway_features_stacking.pkl
+    ├── api_gateway_threshold_stacking.pkl
+    ├── api_gateway_model_type_stacking.pkl
+    ├── api_gateway_labels_stacking.pkl
+    └── api_gateway_base_models_stacking.pkl
 ```
-
-> Tên file `.pkl` có thể khác tùy phiên bản code, nhưng cần đảm bảo các file model/vectorizer/scaler/metadata nằm đúng trong thư mục `models/` của từng Flask service.
 
 ---
 
 ## 🚀 Hướng dẫn cài đặt
 
-### Bước 1 — Tải source code
+### Bước 1 — Clone source
 
-```bash
+```cmd
 git clone https://github.com/sangtran121/sql-injection-detection-ml.git
 cd sql-injection-detection-ml
 ```
 
-Hoặc nhấn **Code → Download ZIP**, giải nén ra thư mục dễ nhớ.
-
----
-
-### Bước 2 — Cài đặt Python & thư viện
+### Bước 2 — Tạo virtual environment
 
 ```cmd
 python -m venv venv
 venv\Scripts\activate
-
-pip install flask pandas scikit-learn xgboost lightgbm joblib numpy
+pip install flask pandas scikit-learn xgboost lightgbm joblib numpy matplotlib
 ```
 
----
-
-### Bước 3 — Train hoặc kiểm tra model
-
-Nếu repository đã có sẵn file `.pkl`, có thể bỏ qua bước train và chạy Flask trực tiếp.
-
-**SQL Injection — model cũ XGBoost:**
+### Bước 3 — Train SQL Injection models
 
 ```cmd
 cd sql_injection_ml
+
 python sql_injection_detection.py
+python train_sql_injection_stacking.py
 ```
 
-**API Gateway — model cũ RandomForest:**
+Kết quả cần có:
+
+```text
+models/sql_injection_xgboost_model.pkl
+models/tfidf_vectorizer.pkl
+models/sql_injection_stacking_model.pkl
+models/tfidf_vectorizer_stacking.pkl
+```
+
+### Bước 4 — Train API Gateway models
 
 ```cmd
 cd api_gateway_ml
+
 python train_api_gateway_model.py
-```
-
-**API Gateway — model mới Stacking 5011:**
-
-```cmd
-cd api_gateway_ml
 python train_api_gateway_stacking_5011_v2.py
 ```
 
-> Với SQL Injection Stacking `5010`, cần đảm bảo trong `sql_injection_ml/models/` có:
-> - `sql_injection_stacking_model.pkl`
-> - `tfidf_vectorizer_stacking.pkl`
+Kết quả cần có:
 
----
+```text
+models/api_gateway_model.pkl
+models/api_gateway_features.pkl
+models/api_gateway_labels.pkl
+models/api_gateway_model_type.pkl
 
-### Bước 4 — Cấu hình database
+models/api_gateway_stacking_model.pkl
+models/api_gateway_features_stacking.pkl
+models/api_gateway_threshold_stacking.pkl
+models/api_gateway_model_type_stacking.pkl
+models/api_gateway_labels_stacking.pkl
+models/api_gateway_base_models_stacking.pkl
+```
 
-Mở **Package Manager Console** trong Visual Studio:
+### Bước 5 — Cấu hình database
+
+Trong Visual Studio → Package Manager Console:
 
 ```powershell
 Update-Database
 ```
 
-Nếu chưa có migration thì tạo migration tương ứng cho:
+Các bảng chính:
 
 ```text
 SQLInjectionLogs
@@ -283,9 +383,7 @@ ApiGatewayLogs
 BlockedIps
 ```
 
----
-
-### Bước 5 — Cấu hình Telegram Bot & Web.config
+### Bước 6 — Cấu hình Telegram
 
 Trong `Web.config`:
 
@@ -296,23 +394,15 @@ Trong `Web.config`:
 <add key="PublicBaseUrl" value="https://your-ngrok-url.ngrok-free.dev" />
 ```
 
-> Không commit token thật, Gmail App Password hoặc secret lên GitHub.
-
----
-
-### Bước 6 — Build web project
-
-1. Mở `eParty.sln` bằng Visual Studio 2022.
-2. Restore NuGet Packages.
-3. Build solution bằng `Ctrl + Shift + B`.
+Không commit token thật lên GitHub.
 
 ---
 
 ## ▶️ Chạy toàn bộ hệ thống
 
-Khuyến nghị chạy đủ 4 Flask service để kiểm tra cả model mới và fallback.
+Nên mở 4 terminal riêng.
 
-### 1️⃣ SQL Injection primary — Stacking `5010`
+### Terminal 1 — SQL Injection Stacking 5010
 
 ```cmd
 cd sql_injection_ml
@@ -320,11 +410,14 @@ cd sql_injection_ml
 python sql_injection_stacking_api.py
 ```
 
-> 🖼️ **SQL Injection Stacking API chạy tại port 5010:**
->
-> ![SQLi Stacking 5010](docs/images/sql_upgrade_01_flask_5010_stacking.png)
+Service:
 
-### 2️⃣ SQL Injection fallback — XGBoost `5000`
+```text
+POST http://127.0.0.1:5010/predict
+GET  http://127.0.0.1:5010/health
+```
+
+### Terminal 2 — SQL Injection XGBoost fallback 5000
 
 ```cmd
 cd sql_injection_ml
@@ -332,11 +425,13 @@ cd sql_injection_ml
 python app.py
 ```
 
-> 🖼️ **SQL Injection XGBoost fallback chạy tại port 5000:**
->
-> ![SQLi XGBoost 5000](docs/images/sql_upgrade_02_flask_5000_fallback.png)
+Service:
 
-### 3️⃣ API Gateway primary — Stacking `5011`
+```text
+POST http://127.0.0.1:5000/predict
+```
+
+### Terminal 3 — API Gateway Stacking 5011
 
 ```cmd
 cd api_gateway_ml
@@ -344,11 +439,15 @@ cd api_gateway_ml
 python api_gateway_stacking_api_5011_v2.py
 ```
 
-> 🖼️ **API Gateway Stacking Ensemble 5011 đang chạy:**
->
-> ![API Gateway Stacking 5011](docs/images/api_upgrade_01_flask_5011_stacking.png)
+Service:
 
-### 4️⃣ API Gateway fallback — RandomForest `5001`
+```text
+POST http://127.0.0.1:5011/predict-api-gateway
+POST http://127.0.0.1:5011/predict-api-gateway-ml-only
+GET  http://127.0.0.1:5011/health
+```
+
+### Terminal 4 — API Gateway RandomForest fallback 5001
 
 ```cmd
 cd api_gateway_ml
@@ -356,15 +455,23 @@ cd api_gateway_ml
 python api_gateway_detector.py
 ```
 
-> 🖼️ **API Gateway RandomForest fallback 5001 đang chạy:**
->
-> ![API Gateway Fallback 5001](docs/images/api_upgrade_02_flask_5001_fallback.png)
+Service:
 
-### 5️⃣ Khởi động Website ASP.NET
+```text
+POST http://127.0.0.1:5001/predict-api-gateway
+POST http://127.0.0.1:5001/predict-api-gateway-ml-only
+GET  http://127.0.0.1:5001/health
+```
 
-Trong Visual Studio: chuột phải `eParty` → **Set as Startup Project** → `F5`.
+### Terminal 5 — Website ASP.NET MVC
 
-Website mở tại:
+Trong Visual Studio:
+
+```text
+Set eParty as Startup Project → F5
+```
+
+Website:
 
 ```text
 https://localhost:44350
@@ -374,15 +481,18 @@ https://localhost:44350
 
 # 🛡️ MODULE 1 — SQL Injection Detection
 
-Module SQL Injection phát hiện và ngăn chặn tấn công SQL Injection theo thời gian thực bằng nhiều lớp:
+## Mục tiêu
 
-- **Rule-based Filter:** chặn ngay các pattern rõ ràng.
-- **ML chính — Stacking Ensemble 5010:** phân loại payload bằng mô hình ensemble.
-- **ML fallback — XGBoost 5000:** dùng khi model 5010 tắt hoặc lỗi.
-- **Admin Review qua Telegram:** cho phép whitelist false positive theo thời gian thực.
-- **Blocked Page:** hiển thị nguồn phát hiện và cho phép người dùng báo cáo sai.
+Module này phát hiện SQL Injection trong:
 
-## 🔄 Luồng xử lý SQL Injection
+- Query string
+- Form input
+- Payload POST
+- URL encoded payload
+- Payload obfuscated bằng comment `/**/`
+- Payload time-based, union-based, error-based, tautology, command execution
+
+## Luồng xử lý production
 
 ```text
 Request
@@ -390,137 +500,307 @@ Request
   ▼
 SqlInjectionFilter
   │
-  ├─ Dynamic Whitelist?
-  ├─ Rule-based raw?
-  ├─ Normalize input?
-  ├─ Rule-based normalized?
-  ├─ Vietnamese whitelist?
-  ├─ ML Primary :5010 Stacking?
-  └─ ML Fallback :5000 XGBoost?
-        │
-        ├─ SQLi → Block 403 + Log + Telegram review
-        └─ Benign → Allow
+  ├── Bypass route nội bộ
+  ├── Dynamic whitelist đã được admin duyệt?
+  ├── Rule-based raw input
+  ├── Normalize input: URL decode + strip comment + normalize whitespace
+  ├── Rule-based normalized input
+  ├── Vietnamese whitelist / benign business text
+  ├── Primary ML: Stacking :5010
+  ├── Fallback ML: XGBoost :5000
+  └── Nếu nguy hiểm → Blocked page + Log + Telegram review
 ```
 
-## 🤖 Model SQL Injection
+## Model mới — Stacking Ensemble 5010
 
-| Thành phần | Bản cũ | Bản mới |
-|---|---|---|
-| Port | `5000` | `5010` |
-| Model | XGBoost + TF-IDF | Stacking Ensemble + TF-IDF |
-| Vai trò | Fallback | Primary |
-| Endpoint | `/predict` | `/predict` |
-| Fallback | Không | Nếu 5010 lỗi → gọi 5000 |
+File:
 
-## 🧪 Trang so sánh model
+```text
+sql_injection_stacking_api.py
+train_sql_injection_stacking.py
+```
 
-Truy cập:
+### Thành phần model
+
+| Thành phần | Vai trò |
+|---|---|
+| TF-IDF char n-gram | Trích xuất đặc trưng chuỗi SQL/payload |
+| Logistic Regression | Base model 1 |
+| Linear SVM calibrated | Base model 2 |
+| XGBoost | Base model 3 |
+| Logistic Regression | Meta model |
+| Threshold | `0.56` |
+
+Endpoint:
+
+```text
+POST http://127.0.0.1:5010/predict
+GET  http://127.0.0.1:5010/health
+```
+
+Response mẫu:
+
+```json
+{
+  "is_sql_injection": true,
+  "probability": 0.9998,
+  "raw_probability": 0.9998,
+  "threshold": 0.56,
+  "status": "blocked",
+  "model": "Stacking Ensemble",
+  "decision_source": "stacking_primary_ml_only",
+  "base_model_scores": {
+    "logistic_regression": 0.99,
+    "linear_svm": 0.98,
+    "xgboost": 1.0
+  },
+  "meta_model": "Logistic Regression"
+}
+```
+
+## Model cũ — XGBoost fallback 5000
+
+File:
+
+```text
+app.py
+sql_injection_detection.py
+```
+
+Endpoint:
+
+```text
+POST http://127.0.0.1:5000/predict
+```
+
+Threshold fallback:
+
+```text
+0.52
+```
+
+## Trang so sánh model
+
+URL:
 
 ```text
 /Admin/SqlInjectionModelComparison
 ```
 
-Trang này so sánh trực tiếp model cũ `5000 XGBoost` và model mới `5010 Stacking`.
+Mục đích:
 
-> 🖼️ **Trang SQL Injection Model Comparison:**
->
-> ![SQLi Model Comparison](docs/images/sql_upgrade_03_model_comparison.png)
+- So sánh XGBoost `5000` và Stacking `5010`
+- Kiểm thử nhiều payload cùng lúc
+- Hiển thị probability, raw probability, response time, status
+- Chỉ ra case model mới phát hiện được còn model cũ bỏ sót
+- Có nút xem chi tiết khi hai model cho kết quả khác nhau
 
-> 🖼️ **Kết quả so sánh nhiều payload SQL Injection:**
->
-> ![SQLi Comparison Results](docs/images/sql_upgrade_04_comparison_results.png)
+<div align="center">
+  <img src="docs/images/sql_upgrade_04_comparison_results.png" alt="SQLi Model Comparison Results" width="850"/>
+</div>
 
-## 🚫 Blocked Page hiển thị nguồn phát hiện
+## Blocked page có nguồn phát hiện
 
-Khi payload bị chặn, trang 403 hiển thị rõ:
+Khi request bị chặn, trang `SQLInjectionBlocked.cshtml` hiển thị:
 
-- Nguồn phát hiện.
-- Model đang dùng.
-- Probability.
-- Threshold.
-- Payload đầy đủ.
-- Nút báo cáo sai cho Admin.
+- Nguồn phát hiện
+- Model sử dụng
+- Probability
+- Threshold
+- Payload đầy đủ
+- Nút quay lại / về trang chủ / báo cáo sai cho admin
 
-> 🖼️ **Blocked Page khi model mới 5010 phát hiện SQL Injection:**
->
-> ![SQLi Blocked by Stacking](docs/images/sql_upgrade_05_blocked_detectedby.png)
-
-## 🔁 Fallback SQL Injection
-
-Khi `5010` tắt nhưng `5000` vẫn chạy, hệ thống tự động fallback sang XGBoost.
-
-> 🖼️ **Blocked Page khi fallback sang XGBoost 5000:**
->
-> ![SQLi Fallback XGBoost](docs/images/sql_fallback_02_5000_fallback.png)
-
-## 📲 Telegram Review
-
-SQL Injection vẫn hỗ trợ Telegram Review:
+Ví dụ:
 
 ```text
-User bị chặn → Báo cáo sai → Telegram alert → Admin bấm Whitelist → Auto retry
+Nguồn phát hiện: ML Stacking_5010 | model=Stacking Ensemble | prob=0.9998 | threshold=0.5600
 ```
 
-Ảnh cũ vẫn dùng được:
+<div align="center">
+  <img src="docs/images/sql_upgrade_05_blocked_detectedby.png" alt="SQLi blocked by 5010" width="650"/>
+</div>
 
-> ![Telegram Alert](docs/images/07_telegram_alert.png)
+## Fallback SQL Injection
+
+Khi `5010` tắt hoặc lỗi, C# service gọi fallback sang `5000`.
+
+Ví dụ trên blocked page:
+
+```text
+Nguồn phát hiện: ML XGBoost_5000_Fallback | model=XGBoost_5000_Fallback | prob=0.9538 | threshold=0.5200
+```
+
+<div align="center">
+  <img src="docs/images/sql_fallback_02_5000_fallback.png" alt="SQLi fallback 5000" width="650"/>
+</div>
+
+## Admin review qua Telegram
+
+Luồng cũ vẫn giữ nguyên:
+
+```text
+User bị block
+  │
+  ▼
+Bấm "Báo cáo Sai cho Admin"
+  │
+  ▼
+Telegram gửi payload + nút Whitelist/Bỏ qua
+  │
+  ▼
+Admin bấm Whitelist
+  │
+  ▼
+Webhook lưu whitelist
+  │
+  ▼
+Blocked page polling và tự retry request
+```
+
+Ảnh cũ:
+
+<div align="center">
+  <img src="docs/images/07_telegram_alert.png" alt="SQLi Telegram Alert" width="650"/>
+</div>
 
 ---
 
 # 🛡️ MODULE 2 — API Gateway Security
 
-Module API Gateway tập trung vào **hành vi truy cập** thay vì nội dung payload: rate, session, sequence, graph API, self-loop, số API duy nhất, số user/session theo IP.
+## Mục tiêu
 
-Phiên bản hiện tại dùng:
+Module này không kiểm tra nội dung SQL, mà kiểm tra **hành vi truy cập**:
 
-- **ML chính — Stacking Ensemble 5011**
-- **ML fallback — RandomForest binary 5001**
-- **Rule Engine production**
-- **Temporary Blocked IP**
-- **Dashboard realtime**
-- **Telegram Alert**
-- **ML-only comparison page**
+- Spam request
+- Flood cùng route
+- Bot crawl nhiều API
+- Slow scan nhiều route
+- Credential stuffing
+- API enumeration
+- Graph bất thường
+- Session/IP behavior bất thường
 
-## 🧠 Realtime Features (13 features)
+## Luồng xử lý production
+
+```text
+Request
+  │
+  ▼
+ApiGatewayMlFilter
+  │
+  ├── Skip route nội bộ bảo mật
+  ├── Trích xuất realtime features theo IP/session
+  ├── Kiểm tra IP đang bị block?
+  ├── Primary ML: Stacking :5011
+  ├── Fallback ML: RandomForest :5001
+  ├── Rule Engine quyết định allow/monitor/rate-limit/block
+  ├── Temporary Blocked IP policy
+  └── Ghi log + Dashboard + Telegram alert
+```
+
+## 13 realtime features
 
 | Feature | Ý nghĩa |
 |---|---|
-| `inter_api_access_duration` | Thời gian giữa 2 request liên tiếp |
+| `inter_api_access_duration` | Thời gian giữa 2 request |
 | `api_access_uniqueness` | Tỷ lệ API khác nhau đã truy cập |
 | `sequence_length` | Số request trong chuỗi hiện tại |
-| `vsession_duration` | Thời lượng session |
-| `num_sessions` | Số session đang hoạt động theo IP |
-| `num_users` | Số user đang hoạt động theo IP |
-| `num_unique_apis` | Số API khác nhau đã gọi |
-| `request_rate_per_min` | Số request/phút |
-| `graph_num_nodes` | Số node trong graph API |
-| `graph_num_edges` | Số cạnh trong graph API |
+| `vsession_duration` | Thời lượng virtual/session |
+| `num_sessions` | Số session liên quan IP |
+| `num_users` | Số user liên quan IP |
+| `num_unique_apis` | Số API khác nhau |
+| `request_rate_per_min` | Request/phút |
+| `graph_num_nodes` | Số node graph |
+| `graph_num_edges` | Số cạnh graph |
 | `graph_density` | Mật độ graph |
-| `graph_self_loops` | Số lần gọi lặp lại cùng API |
-| `graph_avg_degree` | Bậc trung bình của graph |
+| `graph_self_loops` | Số self-loop |
+| `graph_avg_degree` | Bậc trung bình graph |
 
-## 🤖 Model API Gateway
+## Model mới — API Gateway Stacking 5011
 
-| Thành phần | Bản cũ | Bản mới |
-|---|---|---|
-| Port | `5001` | `5011` |
-| Model | RandomForest binary | Stacking Ensemble |
-| Vai trò | Fallback | Primary |
-| Endpoint production | `/predict-api-gateway` | `/predict-api-gateway` |
-| Endpoint so sánh | `/predict-api-gateway-ml-only` | `/predict-api-gateway-ml-only` |
-| Feature count | 13 | 13 |
-| Labels | normal / abnormal | normal / abnormal |
-
-Stacking `5011` sử dụng các base model:
+File:
 
 ```text
-RandomForest + ExtraTrees + LightGBM + XGBoost
-Meta model: LogisticRegression_pure_stacking
+api_gateway_stacking_api_5011_v2.py
+train_api_gateway_stacking_5011_v2.py
 ```
 
-## 📊 Dashboard API Gateway
+Endpoint:
 
-Truy cập:
+```text
+POST http://127.0.0.1:5011/predict-api-gateway
+POST http://127.0.0.1:5011/predict-api-gateway-ml-only
+GET  http://127.0.0.1:5011/health
+```
+
+### Thành phần Stacking
+
+| Thành phần | Vai trò |
+|---|---|
+| RandomForest | Base model |
+| ExtraTrees | Base model |
+| LightGBM | Base model |
+| XGBoost | Base model |
+| Logistic Regression | Meta model |
+| Threshold | `0.75` |
+
+Response production gồm:
+
+```json
+{
+  "action": "monitor",
+  "attack_score": 0.995,
+  "decision_source": "ml_high_risk_monitor",
+  "is_abnormal": true,
+  "ml_risk_score": 0.995,
+  "model": "stacking_ensemble_5011",
+  "normal_score": 0.005,
+  "predicted_label": "abnormal",
+  "risk_score": 0.995,
+  "rule_attack": false,
+  "threshold": 0.75,
+  "base_model_scores": {
+    "random_forest": 0.9609,
+    "extra_trees": 0.7467,
+    "lightgbm": 1.0,
+    "xgboost": 0.9996
+  },
+  "meta_model": "LogisticRegression_pure_stacking"
+}
+```
+
+## Model cũ — API Gateway RandomForest fallback 5001
+
+File:
+
+```text
+api_gateway_detector.py
+train_api_gateway_model.py
+```
+
+Endpoint:
+
+```text
+POST http://127.0.0.1:5001/predict-api-gateway
+POST http://127.0.0.1:5001/predict-api-gateway-ml-only
+GET  http://127.0.0.1:5001/health
+```
+
+Model:
+
+```text
+random_forest_binary
+```
+
+Threshold fallback:
+
+```text
+0.55
+```
+
+## Dashboard API Gateway
+
+URL:
 
 ```text
 /Admin/ApiGatewayDashboard
@@ -528,239 +808,373 @@ Truy cập:
 
 Dashboard hiển thị:
 
-- Tổng log, log trong ngày, log 24h, average risk.
-- ML detector online/offline.
-- Model type hiện tại.
-- Feature count.
-- Allow / Monitor / Rate Limited / Block Logs.
-- Active Blocked IPs.
-- Biểu đồ request theo giờ.
-- Action distribution.
+- Tổng log
+- Log hôm nay
+- Log 24h
+- Average risk
+- ML Detector Service Online/Offline
+- Model Type
+- Feature Count
+- Allow / Monitor / Rate Limited / Block
+- Active Blocked IPs
+- Biểu đồ request theo giờ
+- Biểu đồ phân bố action
 
-> 🖼️ **Dashboard khi model mới 5011 đang active:**
->
-> ![Dashboard New 5011](docs/images/api_upgrade_03_dashboard_new_5011.png)
+Model mới hoạt động:
 
-## 🧪 Trang so sánh API Gateway Model
+<div align="center">
+  <img src="docs/images/api_upgrade_03_dashboard_new_5011.png" alt="API Gateway Dashboard New 5011" width="850"/>
+</div>
 
-Truy cập:
+Fallback sang 5001:
+
+<div align="center">
+  <img src="docs/images/api_upgrade_07_fallback_5001.png" alt="API Gateway fallback 5001" width="850"/>
+</div>
+
+Cả 5011 và 5001 offline nhưng web vẫn load:
+
+<div align="center">
+  <img src="docs/images/api_fallback_03_all_ml_down_web_still_load.png" alt="API Gateway all ML down" width="850"/>
+</div>
+
+## Trang so sánh API Gateway model
+
+URL:
 
 ```text
 /Admin/ApiGatewayModelComparison
 ```
 
-Trang này so sánh `Old 5001 — RandomForest binary` với `New 5011 — Stacking Ensemble` bằng endpoint **ML-only**, không lấy `action production`, để tránh rule engine làm sai kết quả so sánh.
+Mục đích:
 
-> 🖼️ **Trang API Gateway Model Comparison:**
->
-> ![API Gateway Model Comparison](docs/images/api_upgrade_04_model_comparison_page.png)
+- So sánh old `5001 random_forest_binary`
+- So sánh new `5011 stacking_ensemble_5011`
+- Dùng endpoint `ml-only` để so sánh công bằng
+- Không so sánh `action` production vì action còn bị rule engine can thiệp
+- Hiển thị score từng base model và meta model
 
-> 🖼️ **Kết quả so sánh 5001 và 5011:**
->
-> ![API Gateway Comparison Results](docs/images/api_upgrade_05_comparison_results.png)
+<div align="center">
+  <img src="docs/images/api_upgrade_05_comparison_results.png" alt="API Gateway Model Comparison Results" width="850"/>
+</div>
 
-Kết quả thực nghiệm từ các bộ test mở rộng:
+## API Gateway Logs
 
-| Bộ test | Old 5001 | New 5011 |
-|---|---:|---:|
-| 24 kịch bản | 22/24 | 23/24 |
-| 30 kịch bản | 28/30 | 29/30 |
-| 52 kịch bản tổng hợp | 48/52 | 50/52 |
-
-Nhận xét:
-
-- 5011 giảm risk score với traffic bình thường.
-- 5011 tăng risk score với nhiều traffic bất thường.
-- 5011 phát hiện đúng một số case mà 5001 bỏ sót, ví dụ distributed bot nhiều session ít user.
-- 5011 chậm hơn do phải chạy nhiều base model và meta model.
-
-## 📋 API Gateway Logs
-
-Truy cập:
+URL:
 
 ```text
 /Admin/ApiGatewayLogs
 ```
 
-Logs hiển thị `DecisionSource`, ví dụ:
+Cột chính:
+
+- IP
+- Route
+- Risk
+- Label
+- Action
+- Source
+- Rate/min
+- Sequence length
+- Loops
+- Created At
+
+Ví dụ source mới:
 
 ```text
-new_5011_normal
-new_5011_cold_start_allow
 new_5011_ml_high_risk_monitor
-fallback_5001_normal
-fallback_5001_ml_monitor
+new_5011_cold_start_allow
+new_5011_normal
 ```
 
-> 🖼️ **API Gateway Logs ghi nhận request được xử lý bởi 5011:**
->
-> ![API Gateway Logs New 5011](docs/images/api_upgrade_06_logs_new_5011.png)
+<div align="center">
+  <img src="docs/images/api_upgrade_06_logs_new_5011.png" alt="API Gateway Logs New 5011" width="850"/>
+</div>
 
-## 🔁 Fallback API Gateway
+## Rate-limit và Temporary Block
 
-Khi `5011` tắt nhưng `5001` vẫn chạy, dashboard hiển thị model fallback:
-
-```text
-random_forest_binary (fallback_5001)
-```
-
-> 🖼️ **Dashboard khi fallback sang model cũ 5001:**
->
-> ![API Gateway Fallback 5001](docs/images/api_upgrade_07_fallback_5001.png)
-
-Khi cả `5011` và `5001` đều tắt, website vẫn load được. Dashboard báo Offline nhưng không làm sập hệ thống.
-
-> 🖼️ **Cả 5011 và 5001 offline nhưng website vẫn hoạt động:**
->
-> ![API Gateway All ML Down](docs/images/api_fallback_03_all_ml_down_web_still_load.png)
-
-## 🚫 Temporary Blocked IPs
-
-API Gateway vẫn giữ chức năng rate-limit và temporary block:
+Luồng production:
 
 ```text
-normal request → allow
-spam request → challenge_or_rate_limit 429
-tiếp tục spam → block 403 + temporary blocked IP
+Request bình thường
+  │
+  ├── allow
+  │
+Request risk cao
+  │
+  ├── monitor
+  │
+Spam/flood vượt rule
+  │
+  ├── challenge_or_rate_limit / HTTP 429
+  │
+Spam tiếp tục
+  │
+  └── temporary block / HTTP 403
 ```
 
 Ảnh cũ vẫn dùng được:
 
-> ![Blocked IPs Active](docs/images/api_gateway_06_blocked_ips_active.png)
+<div align="center">
+  <img src="docs/images/api_gateway_04_rate_limit_block_test.png" alt="API Gateway rate limit block test" width="850"/>
+</div>
 
-## 📲 Telegram Alert
+## Temporary Blocked IPs
 
-Khi tạo temporary block mới, Telegram gửi cảnh báo realtime kèm nút mở:
+URL:
 
-- Blocked IPs.
-- API Gateway Dashboard.
+```text
+/Admin/BlockedIps
+```
 
-Ảnh cũ vẫn dùng được:
+Ảnh cũ:
 
-> ![Telegram Alert API Gateway](docs/images/api_gateway_08_telegram_alert_buttons.png)
+<div align="center">
+  <img src="docs/images/api_gateway_06_blocked_ips_active.png" alt="Blocked IPs active" width="850"/>
+</div>
+
+## Telegram alert API Gateway
+
+Khi tạo temporary block:
+
+- Gửi IP
+- Route
+- Source
+- Risk
+- Request rate
+- Sequence length
+- Graph self-loops
+- Challenge count
+- Blocked until
+- Nút mở Dashboard/Blocked IPs nếu có `PublicBaseUrl`
+
+Ảnh cũ:
+
+<div align="center">
+  <img src="docs/images/api_gateway_08_telegram_alert_buttons.png" alt="API Gateway Telegram alert" width="650"/>
+</div>
+
+---
+
+## 📊 Kết quả thực nghiệm nâng cấp
+
+### SQL Injection
+
+| Nội dung | Kết quả |
+|---|---|
+| Model cũ | XGBoost + TF-IDF, port 5000 |
+| Model mới | Stacking Ensemble, port 5010 |
+| Base models | Logistic Regression, Linear SVM calibrated, XGBoost |
+| Meta model | Logistic Regression |
+| Threshold mới | 0.56 |
+| Fallback | Nếu 5010 lỗi → dùng XGBoost 5000 |
+| Blocked page | Hiển thị `DetectedBy`, model, probability, threshold |
+
+### API Gateway
+
+Trên bộ kiểm thử mở rộng từ trang comparison:
+
+| Chỉ số | Old 5001 RandomForest | New 5011 Stacking |
+|---|---:|---:|
+| Total cases | 52 | 52 |
+| Correct | 48/52 | 50/52 |
+| Label changed | \- | 2 |
+| Avg response time | ~364.9 ms | ~797.87 ms |
+| Mô hình | random_forest_binary | stacking_ensemble_5011 |
+
+Nhận xét:
+
+- New 5011 đúng nhiều case hơn Old 5001.
+- New 5011 thường giảm risk score với normal traffic.
+- New 5011 thường tăng risk score với abnormal traffic.
+- New 5011 phát hiện đúng một số case mà 5001 bỏ sót, ví dụ distributed bot nhiều session ít user.
+- New 5011 chậm hơn do phải chạy nhiều base learners và meta model.
+- Vì vậy thiết kế tốt nhất là **5011 làm model chính, 5001 làm fallback**.
+
+---
+
+## 🧪 Kịch bản demo đề xuất
+
+### Demo SQL Injection upgrade
+
+| Bước | Thao tác | Kết quả |
+|---|---|---|
+| 1 | Chạy `sql_injection_stacking_api.py` | Port 5010 online |
+| 2 | Chạy `app.py` | Port 5000 fallback online |
+| 3 | Mở `/Admin/SqlInjectionModelComparison` | Thấy trang so sánh 5000 vs 5010 |
+| 4 | Test payload SQLi | 5010 dự đoán SQLi, status blocked |
+| 5 | Gửi payload qua website | Blocked page hiện `ML Stacking_5010` |
+| 6 | Tắt 5010, giữ 5000 | Blocked page hiện `ML XGBoost_5000_Fallback` |
+
+### Demo API Gateway upgrade
+
+| Bước | Thao tác | Kết quả |
+|---|---|---|
+| 1 | Chạy `api_gateway_stacking_api_5011_v2.py` | Port 5011 online |
+| 2 | Chạy `api_gateway_detector.py` | Port 5001 fallback online |
+| 3 | Mở `/Admin/ApiGatewayDashboard` | Model Type: `stacking_ensemble_5011 (new_5011)` |
+| 4 | Mở `/Admin/ApiGatewayModelComparison` | Thấy 5001 vs 5011 |
+| 5 | Test 52 payload | New 5011 đạt 50/52, Old 5001 đạt 48/52 |
+| 6 | Mở `/Admin/ApiGatewayLogs` | Source có `new_5011_...` |
+| 7 | Tắt 5011, giữ 5001 | Dashboard hiện `random_forest_binary (fallback_5001)` |
+| 8 | Tắt cả 5011 và 5001 | Dashboard Offline nhưng website vẫn load |
 
 ---
 
 ## 🛠️ Khắc phục lỗi chung
 
 <details>
-<summary><b>❌ Lỗi: No module named flask / xgboost / lightgbm / sklearn</b></summary>
-
-Chạy:
+<summary><b>Không chạy được Flask vì thiếu thư viện</b></summary>
 
 ```cmd
-pip install flask pandas scikit-learn xgboost lightgbm joblib numpy
+pip install flask pandas scikit-learn xgboost lightgbm joblib numpy matplotlib
 ```
-
 </details>
 
 <details>
-<summary><b>❌ Lỗi: Không tìm thấy file .pkl</b></summary>
+<summary><b>Không tìm thấy file model .pkl</b></summary>
 
-Kiểm tra thư mục model:
+Kiểm tra đúng thư mục:
 
 ```text
 sql_injection_ml/models/
 api_gateway_ml/models/
 ```
 
-Đảm bảo model, vectorizer, scaler, metadata nằm đúng vị trí.
-
+Nếu thiếu thì chạy lại script train tương ứng.
 </details>
 
 <details>
-<summary><b>❌ Website vẫn load nhưng Dashboard báo ML Offline</b></summary>
+<summary><b>SQL Injection không gọi được 5010</b></summary>
 
-Đây là hành vi đúng nếu Flask service chưa chạy hoặc bị tắt. Hệ thống được thiết kế fail-safe:
+Kiểm tra:
 
-```text
-5010 lỗi → fallback 5000
-5011 lỗi → fallback 5001
-cả hai API Gateway ML lỗi → web vẫn load, dashboard báo Offline
+```cmd
+python sql_injection_stacking_api.py
 ```
 
+Sau đó test:
+
+```powershell
+Invoke-RestMethod `
+  -Uri "http://127.0.0.1:5010/predict" `
+  -Method Post `
+  -ContentType "application/json" `
+  -Body '{"query":"admin'' OR 1=1 --"}'
+```
 </details>
 
 <details>
-<summary><b>❌ API Gateway tự chặn trang quản trị bảo mật</b></summary>
+<summary><b>API Gateway không gọi được 5011</b></summary>
 
-Cần skip các route nội bộ trong `ApiGatewayMlFilter`, ví dụ:
+Kiểm tra:
 
-```text
-ApiGatewayDashboard
-ApiGatewayLogs
-BlockedIps
-ApiGatewayModelComparison
-SqlInjectionLog
-Account
+```cmd
+python api_gateway_stacking_api_5011_v2.py
 ```
 
-Nếu không skip, các trang dashboard/log/polling có thể tạo request lặp và gây false positive.
+Health check:
 
+```powershell
+Invoke-RestMethod -Uri "http://127.0.0.1:5011/health"
+```
 </details>
 
 <details>
-<summary><b>❌ Nút Telegram không hoạt động</b></summary>
+<summary><b>Dashboard API Gateway báo fallback_5001</b></summary>
+
+Điều này có nghĩa là 5011 đang tắt hoặc lỗi. Hệ thống vẫn chạy vì tự fallback sang 5001.
+
+Kiểm tra terminal 5011 và chạy lại:
+
+```cmd
+python api_gateway_stacking_api_5011_v2.py
+```
+</details>
+
+<details>
+<summary><b>Dashboard API Gateway báo Offline</b></summary>
+
+Nghĩa là cả 5011 và 5001 đều không gọi được. Website vẫn load nhưng ML detector đang offline. Chạy lại ít nhất một service:
+
+```cmd
+python api_gateway_stacking_api_5011_v2.py
+```
+
+hoặc:
+
+```cmd
+python api_gateway_detector.py
+```
+</details>
+
+<details>
+<summary><b>Telegram không nhận tin nhắn</b></summary>
 
 Kiểm tra:
 
 ```text
-PublicBaseUrl
-ngrok URL
-Telegram webhook
-BotToken
-ChatId
+https://api.telegram.org/bot<TOKEN>/getMe
+https://api.telegram.org/bot<TOKEN>/getUpdates
 ```
 
-Nếu ngrok đổi URL, phải cập nhật `PublicBaseUrl` và đăng ký lại webhook.
+Nếu dùng webhook, kiểm tra:
 
+```text
+https://api.telegram.org/bot<TOKEN>/getWebhookInfo
+```
+</details>
+
+<details>
+<summary><b>ngrok bị Bad Request - Invalid Hostname</b></summary>
+
+Chạy ngrok với:
+
+```cmd
+ngrok http --host-header=rewrite https://localhost:44350
+```
 </details>
 
 ---
 
 ## 📊 Kết quả tổng thể
 
-| | Module 1 — SQL Injection | Module 2 — API Gateway Security |
+| | SQL Injection | API Gateway |
 |---|---|---|
-| Model chính | Stacking Ensemble `:5010` | Stacking Ensemble `:5011` |
-| Model fallback | XGBoost `:5000` | RandomForest binary `:5001` |
-| Kiểu phát hiện | Payload SQL Injection | Hành vi truy cập API |
+| Model chính hiện tại | Stacking Ensemble :5010 | Stacking Ensemble :5011 |
+| Model fallback | XGBoost :5000 | RandomForest binary :5001 |
 | So sánh model | `/Admin/SqlInjectionModelComparison` | `/Admin/ApiGatewayModelComparison` |
-| Action | Block 403 + Telegram Review | Monitor / 429 Rate Limit / 403 Temporary Block |
-| Logging | `SQLInjectionLogs` | `ApiGatewayLogs`, `BlockedIps` |
-| Dashboard | SQL Injection Log / Comparison | Dashboard / Logs / Blocked IPs / Comparison |
-| Fail-safe | 5010 lỗi → 5000 fallback | 5011 lỗi → 5001 fallback; cả hai lỗi → web vẫn load |
+| Bảo vệ | Payload SQL Injection | Hành vi request/API |
+| Rule engine | Có | Có |
+| Dashboard/log | SQLInjectionLog + Blocked Page + Telegram Review | Dashboard + Logs + Blocked IPs |
+| Telegram | Whitelist/Bỏ qua false positive | Temporary Block alert |
+| Fail-safe | 5010 lỗi → 5000 → allow nếu cả hai lỗi | 5011 lỗi → 5001 → offline/allow nếu cả hai lỗi |
+| Điểm mạnh mới | Bắt payload obfuscated tốt hơn, có base/meta model | Bắt distributed bot/graph anomaly tốt hơn |
+| Đánh đổi | Stacking chậm hơn XGBoost | Stacking chậm hơn RandomForest |
 
-Hai module hoạt động **độc lập**. Nếu một lớp hoặc một Flask API gặp sự cố, website vẫn hoạt động bình thường và lớp còn lại tiếp tục bảo vệ hệ thống.
+Hai module hoạt động độc lập. Nếu một module gặp sự cố, module còn lại vẫn tiếp tục bảo vệ website. Các Flask service có fallback để tránh tình trạng website bị đứng hoặc crash khi model chính bị tắt.
 
 ---
 
-## ✅ Kết luận
+## 📌 Ghi chú khi đưa vào báo cáo
 
-Dự án đã hoàn thiện hai nâng cấp chính:
+Có thể viết kết luận:
 
 ```text
-SQL Injection:
-XGBoost 5000 → Stacking Ensemble 5010
-Giữ XGBoost 5000 làm fallback
-
-API Gateway:
-RandomForest 5001 → Stacking Ensemble 5011
-Giữ RandomForest 5001 làm fallback
+Hệ thống eParty đã được nâng cấp từ các mô hình đơn lẻ sang Stacking Ensemble cho cả hai lớp bảo mật. Với SQL Injection, mô hình Stacking :5010 được sử dụng làm model chính và XGBoost :5000 làm fallback. Với API Gateway, mô hình Stacking :5011 được sử dụng làm model chính và RandomForest :5001 làm fallback. Kết quả thực nghiệm cho thấy mô hình mới cải thiện khả năng phát hiện trong nhiều kịch bản, đặc biệt là các hành vi bất thường tinh vi ở API Gateway, trong khi vẫn giữ được cơ chế fail-safe để website hoạt động khi Flask API gặp lỗi.
 ```
-
-Mô hình mới cho khả năng phát hiện tốt hơn trong các bộ test mở rộng, đặc biệt với các hành vi bất thường tinh vi. Tuy nhiên, hệ thống vẫn giữ model cũ làm fallback để đảm bảo tính ổn định và khả năng phục hồi khi model mới tắt hoặc lỗi.
 
 ---
 
 ## 🤝 Đóng góp
 
-Nếu gặp lỗi hoặc muốn cải thiện, hãy mở Issue kèm:
+Khi báo lỗi, vui lòng cung cấp:
 
-- Ảnh chụp màn hình lỗi.
-- Payload / request gây lỗi.
-- Dòng log trong Flask console hoặc Output window của Visual Studio.
-- Ghi rõ lỗi thuộc SQL Injection, API Gateway, Telegram hay Dashboard.
+- Module bị lỗi: SQL Injection hoặc API Gateway
+- Payload hoặc request gây lỗi
+- Ảnh chụp màn hình
+- Log Flask terminal
+- Log Visual Studio Output window
 
 ---
 
