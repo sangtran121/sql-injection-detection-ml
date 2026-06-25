@@ -1,0 +1,504 @@
+﻿
+@using System.Linq
+@model eParty.Areas.Admin.Controllers.ApiGatewayComparisonViewModel
+
+@{
+    ViewBag.Title = "API Gateway Model Comparison";
+    Layout = "~/Areas/Admin/Views/Shared/_LayoutAdmin.cshtml";
+}
+
+@section Styles {
+    <style>
+        .comparison-card {
+            border: 1px solid #e5e7eb;
+            border-radius: 14px;
+            padding: 16px;
+            margin-bottom: 18px;
+            background: #fff;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+        }
+
+        .case-title {
+            font-weight: 700;
+            font-size: 1rem;
+            margin-bottom: 6px;
+        }
+
+        .case-json {
+            margin-top: 10px;
+            font-size: 0.8rem;
+            background: #f8fafc;
+            border-radius: 10px;
+            padding: 10px;
+            word-break: break-word;
+            white-space: pre-wrap;
+            color: #334155;
+        }
+
+        .model-box {
+            border-radius: 12px;
+            padding: 14px;
+            height: 100%;
+            background: #f8fafc;
+            border: 1px solid #e5e7eb;
+        }
+
+            .model-box.new-model {
+                background: #f0f9ff;
+                border-color: #bae6fd;
+            }
+
+        .model-name {
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .score-number {
+            font-size: 1.5rem;
+            font-weight: 800;
+            margin-bottom: 4px;
+        }
+
+        .score-low {
+            color: #16a34a;
+        }
+
+        .score-high {
+            color: #dc2626;
+        }
+
+        .score-mid {
+            color: #d97706;
+        }
+
+        .metric-line {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            font-size: 0.88rem;
+            margin-top: 6px;
+            border-bottom: 1px dashed #e5e7eb;
+            padding-bottom: 4px;
+        }
+
+            .metric-line:last-child {
+                border-bottom: none;
+            }
+
+        .base-model-list {
+            margin-top: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .base-model-badge {
+            display: inline-block;
+            background: #e0f2fe;
+            color: #075985;
+            border-radius: 999px;
+            padding: 4px 8px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .delta-score {
+            font-size: 1rem;
+            font-weight: 800;
+        }
+
+        .delta-positive {
+            color: #dc2626;
+        }
+
+        .delta-negative {
+            color: #16a34a;
+        }
+
+        .result-correct {
+            color: #16a34a;
+            font-weight: 700;
+        }
+
+        .result-wrong {
+            color: #dc2626;
+            font-weight: 700;
+        }
+    </style>
+}
+
+
+<div class="page-inner">
+    <div class="page-header">
+        <h3 class="fw-bold mb-3">API Gateway Model Comparison</h3>
+        <ul class="breadcrumbs mb-3">
+            <li class="nav-home">
+                <a href="/Admin/Dashboard">
+                    <i class="icon-home"></i>
+                </a>
+            </li>
+            <li class="separator">
+                <i class="icon-arrow-right"></i>
+            </li>
+            <li class="nav-item">
+                <a href="#">Security</a>
+            </li>
+            <li class="separator">
+                <i class="icon-arrow-right"></i>
+            </li>
+            <li class="nav-item">
+                <a href="#">API Gateway Model Comparison</a>
+            </li>
+        </ul>
+    </div>
+
+    <div class="alert alert-info">
+        <strong>ML-only comparison:</strong>
+        5001 = baseline model cũ, 5011 = Stacking Ensemble mới.
+        Trang này không so sánh action production vì action có rule engine can thiệp.
+    </div>
+
+    <div class="row">
+        <div class="col-md-12">
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Test behavioral payload trên 5001 và 5011</div>
+                    <p class="card-category">
+                        Mỗi dòng là một JSON object. Có thể thêm field
+                        <code>case_name</code> và <code>expected_label</code>.
+                    </p>
+                </div>
+
+                <div class="card-body">
+                    @using (Html.BeginForm("Index", "ApiGatewayModelComparison", new { area = "Admin" }, FormMethod.Post))
+                    {
+                        @Html.AntiForgeryToken()
+
+                        <div class="form-group">
+                            <label for="JsonPayloads">
+                                <strong>API Gateway feature payloads</strong>
+                            </label>
+                            @Html.TextAreaFor(m => m.JsonPayloads, new
+                            {
+                                @class = "form-control",
+                                rows = "14",
+                                placeholder = "Mỗi dòng nhập một JSON payload."
+                            })
+                            @Html.ValidationMessageFor(m => m.JsonPayloads, "", new { @class = "text-danger" })
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fa fa-play"></i> So sánh 5001 vs 5011
+                        </button>
+
+                        <a href="/Admin/ApiGatewayModelComparison" class="btn btn-secondary ml-2">
+                            Reset mẫu
+                        </a>
+                    }
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Payload mẫu</div>
+                    <p class="card-category">Copy payload nếu muốn test riêng bằng PowerShell</p>
+                </div>
+                <div class="card-body">
+                    @if (Model.Samples != null)
+                    {
+                        foreach (var sample in Model.Samples)
+                        {
+                            <button type="button"
+                                    class="btn btn-sm btn-outline-secondary m-1 sample-btn"
+                                    data-query="@sample.JsonPayload">
+                                @sample.Name (@sample.ExpectedLabel)
+                            </button>
+                        }
+                    }
+                </div>
+            </div>
+
+            @if (Model.HasResult && Model.Summary != null)
+            {
+                <div class="row">
+                    <div class="col-md-2">
+                        <div class="card card-stats card-round">
+                            <div class="card-body text-center">
+                                <p class="card-category">Total Cases</p>
+                                <h4>@Model.Summary.Total</h4>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-2">
+                        <div class="card card-stats card-round">
+                            <div class="card-body text-center">
+                                <p class="card-category">Old Correct</p>
+                                <h4>@Model.Summary.OldCorrect / @Model.Summary.Total</h4>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-2">
+                        <div class="card card-stats card-round">
+                            <div class="card-body text-center">
+                                <p class="card-category">New Correct</p>
+                                <h4>@Model.Summary.NewCorrect / @Model.Summary.Total</h4>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-2">
+                        <div class="card card-stats card-round">
+                            <div class="card-body text-center">
+                                <p class="card-category">Label Changed</p>
+                                <h4>@Model.Summary.LabelChanged</h4>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-2">
+                        <div class="card card-stats card-round">
+                            <div class="card-body text-center">
+                                <p class="card-category">Old Avg Time</p>
+                                <h4>@Model.Summary.OldAvgTimeMs ms</h4>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-2">
+                        <div class="card card-stats card-round">
+                            <div class="card-body text-center">
+                                <p class="card-category">New Avg Time</p>
+                                <h4>@Model.Summary.NewAvgTimeMs ms</h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+
+        
+            @if (Model.HasResult && Model.Rows != null && Model.Rows.Any())
+            {
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">Kết quả so sánh ML-only</div>
+                        <p class="card-category">
+                            Old 5001 = baseline model cũ. New 5011 = Stacking Ensemble.
+                            JSON payload được ẩn để dễ đọc hơn.
+                        </p>
+                    </div>
+
+                    <div class="card-body">
+                        @foreach (var row in Model.Rows)
+                        {
+                            var old = row.OldResult;
+                            var newer = row.NewResult;
+
+                            string expectedBadgeClass = row.ExpectedLabel == "abnormal" ? "badge badge-danger" : "badge badge-success";
+
+                            string oldScoreClass = old != null && old.MlRiskScore >= 0.75 ? "score-high" :
+                                                   old != null && old.MlRiskScore >= 0.55 ? "score-mid" : "score-low";
+
+                            string newScoreClass = newer != null && newer.MlRiskScore >= 0.75 ? "score-high" :
+                                                   newer != null && newer.MlRiskScore >= 0.55 ? "score-mid" : "score-low";
+
+                            string deltaClass = row.ScoreDifference >= 0 ? "delta-positive" : "delta-negative";
+
+                            <div class="comparison-card">
+                                <div class="row align-items-start">
+                                    <div class="col-md-3">
+                                        <div class="case-title">@row.Name</div>
+
+                                        <div>
+                                            Expected:
+                                            <span class="@expectedBadgeClass">@row.ExpectedLabel</span>
+                                        </div>
+
+                                        <div class="mt-2">
+                                            @if (row.LabelChanged)
+                                            {
+                                                <span class="badge badge-warning">Label changed</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge badge-light">Same label</span>
+                                            }
+                                        </div>
+
+                                        <div class="mt-3">
+                                            <div>Δ Score</div>
+                                            <div class="delta-score @deltaClass">
+                                                @row.ScoreDifference.ToString("+0.0000;-0.0000;0.0000")
+                                            </div>
+                                        </div>
+
+                                        <details class="mt-3">
+                                            <summary style="cursor:pointer;">Xem JSON payload</summary>
+                                            <div class="case-json">@row.JsonPayload</div>
+                                        </details>
+                                    </div>
+
+                                    <div class="col-md-4">
+                                        <div class="model-box">
+                                            <div class="model-name">Old 5001 — Baseline</div>
+
+                                            @if (old != null && old.IsOnline)
+                                            {
+                                                <div>
+                                                    <span class="badge badge-success">online</span>
+                                                    <span class="badge badge-secondary">@old.ModelName</span>
+                                                </div>
+
+                                                <div class="score-number @oldScoreClass">
+                                                    @old.MlRiskScore.ToString("0.0000")
+                                                </div>
+
+                                                <div>
+                                                    Label:
+                                                    @if (old.PredictedLabel == "abnormal")
+                                                    {
+                                                        <span class="badge badge-danger">abnormal</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="badge badge-success">normal</span>
+                                                    }
+                                                </div>
+
+                                                <div class="metric-line">
+                                                    <span>Đánh giá</span>
+                                                    <span class="@(row.OldCorrect ? "result-correct" : "result-wrong")">
+                                                        @(row.OldCorrect ? "Correct" : "Wrong")
+                                                    </span>
+                                                </div>
+
+                                                <div class="metric-line">
+                                                    <span>Normal score</span>
+                                                    <span>@old.NormalScore.ToString("0.0000")</span>
+                                                </div>
+
+                                                <div class="metric-line">
+                                                    <span>Threshold</span>
+                                                    <span>@old.Threshold.ToString("0.0000")</span>
+                                                </div>
+
+                                                <div class="metric-line">
+                                                    <span>Time</span>
+                                                    <span>@old.ResponseTimeMs.ToString("0.00") ms</span>
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge badge-danger">offline</span>
+                                                <p class="text-danger mt-2">@(old == null ? "No response" : old.ErrorMessage)</p>
+                                            }
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-5">
+                                        <div class="model-box new-model">
+                                            <div class="model-name">New 5011 — Stacking Ensemble</div>
+
+                                            @if (newer != null && newer.IsOnline)
+                                            {
+                                                <div>
+                                                    <span class="badge badge-success">online</span>
+                                                    <span class="badge badge-info">@newer.ModelName</span>
+                                                </div>
+
+                                                <div class="score-number @newScoreClass">
+                                                    @newer.MlRiskScore.ToString("0.0000")
+                                                </div>
+
+                                                <div>
+                                                    Label:
+                                                    @if (newer.PredictedLabel == "abnormal")
+                                                    {
+                                                        <span class="badge badge-danger">abnormal</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="badge badge-success">normal</span>
+                                                    }
+                                                </div>
+
+                                                <div class="metric-line">
+                                                    <span>Đánh giá</span>
+                                                    <span class="@(row.NewCorrect ? "result-correct" : "result-wrong")">
+                                                        @(row.NewCorrect ? "Correct" : "Wrong")
+                                                    </span>
+                                                </div>
+
+                                                <div class="metric-line">
+                                                    <span>Normal score</span>
+                                                    <span>@newer.NormalScore.ToString("0.0000")</span>
+                                                </div>
+
+                                                <div class="metric-line">
+                                                    <span>Threshold</span>
+                                                    <span>@newer.Threshold.ToString("0.0000")</span>
+                                                </div>
+
+                                                <div class="metric-line">
+                                                    <span>Time</span>
+                                                    <span>@newer.ResponseTimeMs.ToString("0.00") ms</span>
+                                                </div>
+
+                                                <div class="metric-line">
+                                                    <span>Meta model</span>
+                                                    <span>@newer.MetaModel</span>
+                                                </div>
+
+                                                if (!string.IsNullOrWhiteSpace(newer.BaseModelScores))
+                                                {
+                                                    <div class="base-model-list">
+                                                        @{
+                                                            var parts = newer.BaseModelScores.Split(',');
+                                                            foreach (var part in parts)
+                                                            {
+                                                                <span class="base-model-badge">@part.Trim()</span>
+                                                            }
+                                                        }
+                                                    </div>
+                                                }
+                                            }
+                                            else
+                                            {
+                                                <span class="badge badge-danger">offline</span>
+                                                <p class="text-danger mt-2">@(newer == null ? "No response" : newer.ErrorMessage)</p>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+      
+
+        </div>
+    </div>
+</div>
+
+@section scripts {
+    <script>
+        document.querySelectorAll('.sample-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var textarea = document.getElementById('JsonPayloads');
+                if (!textarea) return;
+
+                var value = this.getAttribute('data-query');
+
+                if (textarea.value.trim().length === 0) {
+                    textarea.value = value;
+                } else {
+                    textarea.value = textarea.value.trim() + "\n" + value;
+                }
+            });
+        });
+    </script>
+}
+

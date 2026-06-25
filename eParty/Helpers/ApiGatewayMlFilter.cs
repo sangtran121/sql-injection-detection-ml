@@ -100,6 +100,11 @@ namespace eParty.Helpers
         /// <summary>
         /// Bỏ qua các request không cần kiểm tra.
         /// </summary>
+        /// <summary>
+        /// Bỏ qua các request không cần kiểm tra API Gateway ML.
+        /// Các route quản trị bảo mật / log / whitelist phải được bỏ qua
+        /// để tránh vòng lặp tự chặn chính hệ thống bảo mật.
+        /// </summary>
         private bool ShouldSkip(ActionExecutingContext filterContext)
         {
             try
@@ -118,7 +123,7 @@ namespace eParty.Helpers
                 }
 
                 controller = controller.ToLowerInvariant();
-                action = action.ToLowerInvariant();
+                action = (action ?? "").ToLowerInvariant();
 
                 // Không kiểm tra trang lỗi để tránh vòng lặp lỗi.
                 if (controller == "error")
@@ -126,11 +131,37 @@ namespace eParty.Helpers
                     return true;
                 }
 
-                // Nếu sau này có controller log riêng thì nên bỏ qua để admin còn xem log.
+                // Bỏ qua các controller của chính hệ thống API Gateway.
+                // Nếu không skip, admin có thể bị chặn khi đang xem log / dashboard / unblock IP.
                 if (
                     controller == "apigatewaylogs" ||
                     controller == "apigatewaydashboard" ||
-                    controller == "blockedips"
+                    controller == "blockedips" ||
+                    controller == "apigatewaymodelcomparison"
+                )
+                {
+                    return true;
+                }
+
+                // Bỏ qua module SQL Injection review/whitelist.
+                // Route như SQLInjectionLog/CheckWhitelisted polling liên tục sau khi user báo cáo sai.
+                // Nếu API Gateway kiểm tra route này, nó sẽ tự tạo rate cao và block nhầm admin/user.
+                if (controller == "sqlinjectionlog")
+                {
+                    return true;
+                }
+
+                // Bỏ qua login/logout/register để tránh trường hợp redirect ReturnUrl hoặc login flow bị rate-limit.
+                if (controller == "account")
+                {
+                    return true;
+                }
+
+                // Bỏ qua các file tĩnh nếu có request đi qua MVC route.
+                if (
+                    controller == "content" ||
+                    controller == "scripts" ||
+                    controller == "bundles"
                 )
                 {
                     return true;
@@ -140,7 +171,8 @@ namespace eParty.Helpers
             }
             catch
             {
-                return false;
+                // Nếu lỗi khi đọc route thì cho qua để filter không làm sập website.
+                return true;
             }
         }
 

@@ -22,6 +22,7 @@
 import os
 import joblib
 import pandas as pd
+import time
 from flask import Flask, request, jsonify
 
 app = Flask(__name__)
@@ -369,6 +370,91 @@ def predict_api_gateway():
 # ============================================================
 # HEALTH
 # ============================================================
+
+@app.route("/predict-api-gateway-ml-only", methods=["POST"])
+def predict_api_gateway_ml_only():
+    """
+    ML-only endpoint cho trang so sánh model.
+    Không dùng rule engine.
+    Không cold-start allow.
+    Không challenge/block production.
+    Chỉ trả về xác suất abnormal từ model cũ 5001.
+    """
+    start_time = time.perf_counter()
+
+    if not MODEL_LOADED:
+        return fallback_allow("ml_only_old_5001_model_not_loaded")
+
+    data = request.get_json(force=True, silent=True)
+
+    if not data:
+        return jsonify({"error": "Missing JSON body"}), 400
+
+    raw_values = {
+        "inter_api_access_duration(sec)": safe_float(data, "inter_api_access_duration", 0),
+        "api_access_uniqueness": safe_float(data, "api_access_uniqueness", 0),
+        "sequence_length(count)": safe_float(data, "sequence_length", 0),
+        "vsession_duration(min)": safe_float(data, "vsession_duration", 0),
+        "num_sessions": safe_float(data, "num_sessions", 1),
+        "num_users": safe_float(data, "num_users", 1),
+        "num_unique_apis": safe_float(data, "num_unique_apis", 0),
+        "request_rate_per_min": safe_float(data, "request_rate_per_min", 0),
+        "graph_num_nodes": safe_float(data, "graph_num_nodes", 0),
+        "graph_num_edges": safe_float(data, "graph_num_edges", 0),
+        "graph_density": safe_float(data, "graph_density", 0),
+        "graph_self_loops": safe_float(data, "graph_self_loops", 0),
+        "graph_avg_degree": safe_float(data, "graph_avg_degree", 0),
+    }
+
+    try:
+        X = pd.DataFrame([raw_values])[feature_cols]
+
+        if hasattr(model, "predict_proba"):
+            probs = model.predict_proba(X)[0]
+            normal_score = float(probs[0])
+            abnormal_score = float(probs[1])
+        else:
+            pred_raw = int(model.predict(X)[0])
+            abnormal_score = float(pred_raw)
+            normal_score = 1.0 - abnormal_score
+
+        threshold = ML_MONITOR_THRESHOLD
+        is_abnormal = abnormal_score >= threshold
+        predicted_label = "abnormal" if is_abnormal else "normal"
+
+        response_time_ms = (time.perf_counter() - start_time) * 1000
+
+        return jsonify({
+            "action": "ml_only",
+            "attack_score": round(abnormal_score, 4),
+            "decision_source": "ml_only_old_5001",
+            "is_abnormal": is_abnormal,
+            "ml_risk_score": round(abnormal_score, 4),
+            "model": str(model_type),
+            "normal_score": round(normal_score, 4),
+            "predicted_label": predicted_label,
+            "response_time_ms": round(response_time_ms, 2),
+            "risk_score": round(abnormal_score, 4),
+            "rule_attack": False,
+            "threshold": threshold
+        }), 200
+
+    except Exception as e:
+        return jsonify({
+            "action": "ml_only_error",
+            "attack_score": 0,
+            "decision_source": "ml_only_old_5001_error",
+            "error": str(e),
+            "is_abnormal": False,
+            "ml_risk_score": 0,
+            "model": str(model_type),
+            "normal_score": 1,
+            "predicted_label": "normal",
+            "response_time_ms": round((time.perf_counter() - start_time) * 1000, 2),
+            "risk_score": 0,
+            "rule_attack": False,
+            "threshold": ML_MONITOR_THRESHOLD
+        }), 200
 
 @app.route("/health", methods=["GET"])
 def health():
