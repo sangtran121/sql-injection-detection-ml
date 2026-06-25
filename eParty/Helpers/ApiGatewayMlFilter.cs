@@ -98,9 +98,6 @@ namespace eParty.Helpers
         }
 
         /// <summary>
-        /// Bỏ qua các request không cần kiểm tra.
-        /// </summary>
-        /// <summary>
         /// Bỏ qua các request không cần kiểm tra API Gateway ML.
         /// Các route quản trị bảo mật / log / whitelist phải được bỏ qua
         /// để tránh vòng lặp tự chặn chính hệ thống bảo mật.
@@ -180,6 +177,10 @@ namespace eParty.Helpers
         /// Xử lý challenge/rate-limit.
         /// Trả HTTP 429.
         /// </summary>
+        /// <summary>
+        /// Xử lý challenge/rate-limit.
+        /// Trả HTTP 429.
+        /// </summary>
         private void HandleChallengeOrRateLimit(
             ActionExecutingContext filterContext,
             ApiGatewayMlResult result
@@ -214,18 +215,24 @@ namespace eParty.Helpers
                 return;
             }
 
-            filterContext.Result = new ContentResult
-            {
-                ContentType = "text/plain",
-                Content =
-                    "429 Too Many Requests\n\n" +
-                    message + "\n\n" +
-                    "Risk score: " + Math.Round(result.RiskScore, 4) + "\n" +
-                    "Predicted label: " + result.PredictedLabel + "\n" +
-                    "Decision source: " + result.DecisionSource
-            };
+            string controller = GetRouteValue(filterContext, "controller");
+            string actionName = GetRouteValue(filterContext, "action");
+            string route = controller + "/" + actionName;
+            string ip = GetClientIp(filterContext);
+
+            ShowApiGatewayBlockedPage(
+                filterContext,
+                result,
+                ip,
+                route,
+                429
+            );
         }
 
+        /// <summary>
+        /// Xử lý block cứng.
+        /// Trả HTTP 403.
+        /// </summary>
         /// <summary>
         /// Xử lý block cứng.
         /// Trả HTTP 403.
@@ -263,16 +270,18 @@ namespace eParty.Helpers
                 return;
             }
 
-            filterContext.Result = new ContentResult
-            {
-                ContentType = "text/plain",
-                Content =
-                    "403 Forbidden\n\n" +
-                    message + "\n\n" +
-                    "Risk score: " + Math.Round(result.RiskScore, 4) + "\n" +
-                    "Predicted label: " + result.PredictedLabel + "\n" +
-                    "Decision source: " + result.DecisionSource
-            };
+            string controller = GetRouteValue(filterContext, "controller");
+            string actionName = GetRouteValue(filterContext, "action");
+            string route = controller + "/" + actionName;
+            string ip = GetClientIp(filterContext);
+
+            ShowApiGatewayBlockedPage(
+                filterContext,
+                result,
+                ip,
+                route,
+                403
+            );
         }
 
         /// <summary>
@@ -322,6 +331,50 @@ namespace eParty.Helpers
             {
                 // ignored
             }
+        }
+        private void ShowApiGatewayBlockedPage(
+            ActionExecutingContext filterContext,
+            ApiGatewayMlResult result,
+            string ipAddress,
+            string route,
+            int statusCode)
+        {
+            if (filterContext == null)
+            {
+                return;
+            }
+
+            if (result == null)
+            {
+                result = ApiGatewayMlResult.Allow("fallback_empty_result");
+            }
+
+            string title = statusCode == 403
+                ? "IP của bạn đang bị khóa tạm thời"
+                : "Yêu cầu của bạn bị giới hạn";
+
+            string message = statusCode == 403
+                ? "API Gateway phát hiện hành vi truy cập bất thường lặp lại và đã tạm thời khóa IP."
+                : "API Gateway phát hiện tần suất truy cập bất thường và đã giới hạn yêu cầu này.";
+
+            var viewData = new ViewDataDictionary();
+
+            viewData["Title"] = title;
+            viewData["Message"] = message;
+            viewData["IpAddress"] = string.IsNullOrWhiteSpace(ipAddress) ? "unknown" : ipAddress;
+            viewData["Route"] = string.IsNullOrWhiteSpace(route) ? "unknown" : route;
+            viewData["RiskScore"] = result.RiskScore.ToString("0.0000");
+            viewData["PredictedLabel"] = result.PredictedLabel ?? "unknown";
+            viewData["DecisionSource"] = result.DecisionSource ?? "unknown";
+            viewData["FinalAction"] = result.Action ?? "unknown";
+            viewData["StatusCode"] = statusCode;
+
+            filterContext.HttpContext.Response.StatusCode = statusCode;
+            filterContext.Result = new ViewResult
+            {
+                ViewName = "~/Views/Shared/ApiGatewayBlocked.cshtml",
+                ViewData = viewData
+            };
         }
 
         private bool IsAjaxRequest(ActionExecutingContext filterContext)

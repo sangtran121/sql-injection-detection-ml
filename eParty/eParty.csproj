@@ -2266,6 +2266,7 @@
     <Content Include="Views\SQLInjectionLog\Index.cshtml" />
     <Content Include="Views\SqlInjectionTest\Index.cshtml" />
     <Content Include="Views\Shared\SQLInjectionBlocked.cshtml" />
+    <Content Include="Views\Shared\ApiGatewayBlocked.cshtml" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="App_Data\" />

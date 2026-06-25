@@ -1,0 +1,277 @@
+﻿@{
+    Layout = null;
+
+    string title = Convert.ToString(ViewData["Title"] ?? "Truy cập bị giới hạn");
+    string message = Convert.ToString(ViewData["Message"] ?? "API Gateway phát hiện hành vi truy cập bất thường.");
+    string ip = Convert.ToString(ViewData["IpAddress"] ?? "unknown");
+    string route = Convert.ToString(ViewData["Route"] ?? "unknown");
+    string riskScore = Convert.ToString(ViewData["RiskScore"] ?? "0.0000");
+    string predictedLabel = Convert.ToString(ViewData["PredictedLabel"] ?? "unknown");
+    string decisionSource = Convert.ToString(ViewData["DecisionSource"] ?? "unknown");
+    string finalAction = Convert.ToString(ViewData["FinalAction"] ?? "unknown");
+
+    int statusCode = 429;
+    if (ViewData["StatusCode"] != null)
+    {
+        int.TryParse(Convert.ToString(ViewData["StatusCode"]), out statusCode);
+    }
+
+    bool isBlocked = statusCode == 403 || finalAction == "block";
+}
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <title>@title</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: Arial, Helvetica, sans-serif;
+            background: linear-gradient(135deg, #172554, #2563eb);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .blocked-wrapper {
+            width: 92%;
+            max-width: 780px;
+            background: rgba(255,255,255,0.12);
+            border: 1px solid rgba(255,255,255,0.22);
+            border-radius: 24px;
+            padding: 34px;
+            box-shadow: 0 24px 80px rgba(0,0,0,0.35);
+        }
+
+        .icon {
+            width: 92px;
+            height: 92px;
+            margin: 0 auto 20px auto;
+            border-radius: 50%;
+            background: #ffffff;
+            color: #dc2626;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+        }
+
+        h1 {
+            text-align: center;
+            margin: 0 0 12px 0;
+            font-size: 34px;
+            font-weight: 800;
+        }
+
+        .subtitle {
+            text-align: center;
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 24px;
+            color: #dbeafe;
+        }
+
+        .info-box {
+            background: rgba(15,23,42,0.45);
+            border-radius: 16px;
+            padding: 18px;
+            margin-bottom: 22px;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 18px;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.14);
+            font-size: 15px;
+        }
+
+            .info-row:last-child {
+                border-bottom: none;
+            }
+
+        .label {
+            color: #bfdbfe;
+            font-weight: 700;
+            min-width: 150px;
+        }
+
+        .value {
+            text-align: right;
+            word-break: break-word;
+            font-weight: 600;
+        }
+
+        .risk {
+            color: #fde68a;
+            font-weight: 800;
+        }
+
+        .source {
+            color: #fef3c7;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 6px 11px;
+            border-radius: 999px;
+            font-size: 13px;
+            font-weight: 800;
+        }
+
+        .badge-block {
+            background: #dc2626;
+            color: white;
+        }
+
+        .badge-rate {
+            background: #f59e0b;
+            color: white;
+        }
+
+        .badge-label {
+            background: #334155;
+            color: white;
+        }
+
+        .actions {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 12px;
+            margin-top: 22px;
+        }
+
+        .btn {
+            text-decoration: none;
+            padding: 13px 20px;
+            border-radius: 999px;
+            font-weight: 800;
+            display: inline-block;
+        }
+
+        .btn-light {
+            background: #fff;
+            color: #1d4ed8;
+        }
+
+        .btn-outline {
+            border: 1px solid rgba(255,255,255,0.75);
+            color: #fff;
+        }
+
+        
+
+        .small-note {
+            text-align: center;
+            color: #bfdbfe;
+            font-size: 13px;
+            margin-top: 18px;
+            line-height: 1.5;
+        }
+
+        @@media (max-width: 576px) {
+            .blocked-wrapper {
+                padding: 24px;
+            }
+
+            h1 {
+                font-size: 26px;
+            }
+
+            .info-row {
+                display: block;
+            }
+
+            .value {
+                text-align: left;
+                margin-top: 6px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="blocked-wrapper">
+        <div class="icon">
+            @(isBlocked ? "⛔" : "⚠️")
+        </div>
+
+        <h1>@title</h1>
+
+        <div class="subtitle">
+            @message
+            <br />
+            Nếu đây là thao tác hợp lệ, vui lòng thử lại sau hoặc liên hệ quản trị viên.
+        </div>
+
+        <div class="info-box">
+            <div class="info-row">
+                <div class="label">Trạng thái</div>
+                <div class="value">
+                    @if (isBlocked)
+                    {
+                        <span class="badge badge-block">Temporary Block - 403</span>
+                    }
+                    else
+                    {
+                        <span class="badge badge-rate">Rate Limited - 429</span>
+                    }
+                </div>
+            </div>
+
+            <div class="info-row">
+                <div class="label">IP</div>
+                <div class="value">@ip</div>
+            </div>
+
+            <div class="info-row">
+                <div class="label">Route</div>
+                <div class="value">@route</div>
+            </div>
+
+            <div class="info-row">
+                <div class="label">Risk score</div>
+                <div class="value risk">@riskScore</div>
+            </div>
+
+            <div class="info-row">
+                <div class="label">Predicted label</div>
+                <div class="value">
+                    <span class="badge badge-label">@predictedLabel</span>
+                </div>
+            </div>
+
+            <div class="info-row">
+                <div class="label">Decision source</div>
+                <div class="value source">@decisionSource</div>
+            </div>
+
+            <div class="info-row">
+                <div class="label">Final action</div>
+                <div class="value">@finalAction</div>
+            </div>
+        </div>
+
+        <div class="actions">
+            <a class="btn btn-light" href="javascript:history.back()">← Quay lại</a>
+            <a class="btn btn-outline" href="/">🏠 Trang chủ</a>
+        </div>
+
+        <div class="small-note">
+            API Gateway Security kiểm tra hành vi truy cập theo request rate, session, sequence và graph features.
+            <br />
+            Trang này hiển thị khi hệ thống phát hiện dấu hiệu spam, flood hoặc bot.
+        </div>
+    </div>
+</body>
+</html>
